@@ -1,4 +1,14 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+
+export const UserRole = {
+  CUSTOMER: 'CUSTOMER',
+  AFFILIATE: 'AFFILIATE',
+  ADMIN: 'ADMIN',
+  DELIVERY_AGENT: 'DELIVERY_AGENT',
+  SUPER_ADMIN: 'SUPER_ADMIN'
+} as const;
+
+type UserRole = typeof UserRole[keyof typeof UserRole];
 
 const prisma = new PrismaClient();
 
@@ -59,7 +69,7 @@ async function main() {
       sweetness: 5,
       isOrganic: true,
       originDistrict: 'Rajshahi',
-      imageUrl: ['https://images.unsplash.com/photo-1553279768-865429fa0078'],
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
       seoTitle: 'Buy Premium Himsagar Mangoes Online | Direct Farm Delivery',
       seoDesc: 'Savor the authentic taste of Rajshahi with fiberless, naturally sweetened premium Himsagar mangoes.',
     },
@@ -76,7 +86,7 @@ async function main() {
       sweetness: 4,
       isOrganic: true,
       originDistrict: 'Chapainawabganj',
-      imageUrl: ['https://images.unsplash.com/photo-1553279768-865429fa0078'],
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
       seoTitle: 'Buy Farm Fresh Langra Mangoes Online | Chapainawabganj Orchard',
       seoDesc: 'Original sweet and tangy Langra mangoes direct from Chapainawabganj. Order online today!',
     },
@@ -135,14 +145,20 @@ async function main() {
   console.log('📦 Product Variants & Inventory records seeded.');
 
   // 5. Seed Delivery Zones
-  await prisma.deliveryZone.createMany({
-    data: [
-      { name: 'Dhaka Metropolitan Central', district: 'Dhaka', baseCharge: 120.0, isActive: true },
-      { name: 'Rajshahi Town Express', district: 'Rajshahi', baseCharge: 60.0, isActive: true },
-      { name: 'Chittagong Central Coast', district: 'Chittagong', baseCharge: 150.0, isActive: true },
-    ],
-    skipDuplicates: true,
-  });
+  const zones = [
+    { name: 'Dhaka Metropolitan Central', district: 'Dhaka', baseCharge: 120.0, isActive: true },
+    { name: 'Rajshahi Town Express', district: 'Rajshahi', baseCharge: 60.0, isActive: true },
+    { name: 'Chittagong Central Coast', district: 'Chittagong', baseCharge: 150.0, isActive: true },
+  ];
+
+  for (const zone of zones) {
+    const existing = await prisma.deliveryZone.findFirst({
+      where: { name: zone.name }
+    });
+    if (!existing) {
+      await prisma.deliveryZone.create({ data: zone });
+    }
+  }
   console.log('🚚 Shipping Logistics zones seeded.');
 
   console.log('🎉 Database seeding completed successfully!');
