@@ -1,0 +1,443 @@
+// datasource config
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  AFFILIATE
+  ADMIN
+  DELIVERY_AGENT
+  SUPER_ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  FAILED
+  RETURN_INITIATED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  CANCELLED
+}
+
+// ==========================================
+// User & Auth Management
+// ==========================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String?
+  fullName      String
+  phone         String?   @unique
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  isVerified    Boolean   @default(false)
+  avatarUrl     String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  affiliateProfile Affiliate?
+  orders           Order[]
+  reviews          Review[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  deliveryRuns     Order[] @relation("DeliveryAgentRuns")
+
+  @@index([email])
+  @@index([role])
+}
+
+// ==========================================
+// Product Catalog & Inventory
+// ==========================================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  products    Product[]
+}
+
+model Product {
+  id            String           @id @default(uuid())
+  categoryId    String
+  name          String
+  slug          String           @unique
+  description   String
+  sweetness     Int              @default(3) // sweet scale 1-5
+  isOrganic     Boolean          @default(true)
+  originDistrict String
+  imageUrl      String[]
+  isActive      Boolean          @default(true)
+  seoTitle      String?
+  seoDesc       String?
+  
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+
+  category      Category         @relation(fields: [categoryId], references: [id])
+  variants      ProductVariant[]
+  reviews       Review[]
+  campaignItems CampaignItem[]
+
+  @@index([categoryId])
+  @@index([slug])
+}
+
+model ProductVariant {
+  id          String     @id @default(uuid())
+  productId   String
+  sku         String     @unique
+  weightKg    Decimal    @db.Decimal(5, 2)
+  boxCount    Int        @default(1)
+  price       Decimal    @db.Decimal(10, 2)
+  discount    Decimal    @default(0) @db.Decimal(10, 2)
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory   Inventory?
+  orderItems  OrderItem[]
+
+  @@index([productId])
+  @@index([sku])
+}
+
+model Inventory {
+  id             String         @id @default(uuid())
+  variantId      String         @unique
+  availableStock Int            @default(0)
+  reservedStock  Int            @default(0)
+  batchNumber    String
+  harvestDate    DateTime
+  shelfLifeDays  Int            @default(14)
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
+// ==========================================
+// Affiliate Module
+// ==========================================
+
+model Affiliate {
+  id             String           @id @default(uuid())
+  userId         String           @unique
+  referralCode   String           @unique
+  paymentDetails String?          // Encrypted payout details
+  walletBalance  Decimal          @default(0) @db.Decimal(10, 2)
+  isActive       Boolean          @default(true)
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id])
+  clicks         ReferralClick[]
+  commissions    AffiliateCommission[]
+  withdrawals    WithdrawRequest[]
+
+  @@index([referralCode])
+}
+
+model ReferralClick {
+  id          String    @id @default(uuid())
+  affiliateId String
+  ipAddress   String?
+  userAgent   String?
+  referrerUrl String?
+  clickedAt   DateTime  @default(now())
+
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([clickedAt])
+}
+
+model AffiliateCommission {
+  id          String           @id @default(uuid())
+  affiliateId String
+  orderId     String           @unique
+  amount      Decimal          @db.Decimal(10, 2)
+  status      CommissionStatus @default(PENDING)
+  notes       String?
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  affiliate   Affiliate        @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  order       Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+}
+
+model WithdrawRequest {
+  id          String       @id @default(uuid())
+  affiliateId String
+  amount      Decimal      @db.Decimal(10, 2)
+  status      PayoutStatus @default(PENDING)
+  method      String       // Bank, SSLCommerz payout, bKash etc.
+  txRef       String?      @unique
+  notes       String?
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  affiliate   Affiliate    @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+}
+
+// ==========================================
+// Order, Shopping, & COD Management
+// ==========================================
+
+model Order {
+  id              String         @id @default(uuid())
+  userId          String
+  status          OrderStatus    @default(PENDING)
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  shippingCost    Decimal        @db.Decimal(10, 2)
+  discountApplied Decimal        @default(0) @db.Decimal(10, 2)
+  
+  // Delivery & Logistics details
+  shippingAddress String
+  district        String
+  deliveryZoneId  String?
+  deliverySlot    String
+  deliveryAgentId String?
+  deliveryOtp     String?        // Code to complete COD/Secure delivery
+  codVerified     Boolean        @default(false)
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  user            User           @relation(fields: [userId], references: [id])
+  deliveryZone    DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id])
+  deliveryAgent   User?          @relation("DeliveryAgentRuns", fields: [deliveryAgentId], references: [id])
+  items           OrderItem[]
+  payment         Payment?
+  commission      AffiliateCommission?
+  transactions    Transaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([deliveryAgentId])
+}
+
+model OrderItem {
+  id        String         @id @default(uuid())
+  orderId   String
+  variantId String
+  quantity  Int
+  price     Decimal        @db.Decimal(10, 2) // Price locked at checkout
+
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  status        PaymentStatus @default(PENDING)
+  gateway       String        // STRIPE, SSLCOMMERZ, COD
+  gatewayTxId   String?       @unique
+  amount        Decimal       @db.Decimal(10, 2)
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  discountPct    Decimal   @default(0) @db.Decimal(5, 2)
+  discountAmount Decimal   @default(0) @db.Decimal(10, 2)
+  minCartValue   Decimal   @default(0) @db.Decimal(10, 2)
+  expiryDate     DateTime
+  usageLimit     Int       @default(100)
+  usedCount      Int       @default(0)
+  isActive       Boolean   @default(true)
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  @@index([code])
+}
+
+// ==========================================
+// Logistics & Infrastructure
+// ==========================================
+
+model DeliveryZone {
+  id           String   @id @default(uuid())
+  name         String
+  district     String
+  baseCharge   Decimal  @db.Decimal(10, 2)
+  isActive     Boolean  @default(true)
+  
+  orders       Order[]
+}
+
+// ==========================================
+// Other Support Entities (Blog, Campaign, Notification)
+// ==========================================
+
+model Campaign {
+  id          String         @id @default(uuid())
+  title       String
+  slug        String         @unique
+  bannerUrl   String
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean        @default(true)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  items       CampaignItem[]
+}
+
+model CampaignItem {
+  id         String   @id @default(uuid())
+  campaignId String
+  productId  String
+  
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  userId    String
+  rating    Int      @default(5)
+  comment   String
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Blog {
+  id        String    @id @default(uuid())
+  title     String
+  slug      String    @unique
+  content   String
+  imageUrl  String?
+  seoTitle  String?
+  seoDesc   String?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([slug])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  type      String   // SYSTEM, ORDER, AFFILIATE
+  
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  orderId   String
+  type      String   // DEBIT, CREDIT
+  amount    Decimal  @db.Decimal(10, 2)
+  channel   String   // MFS, STRIPE, CASH
+  status    String   // SUCCESS, FAILED
+  reference String?
+  
+  createdAt DateTime @default(now())
+
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String
+  ipAddress String?
+  
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
