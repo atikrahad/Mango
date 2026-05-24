@@ -1,52 +1,14 @@
 // datasource config
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-enum UserRole {
-  CUSTOMER
-  AFFILIATE
-  ADMIN
-  DELIVERY_AGENT
-  SUPER_ADMIN
-}
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PACKED
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  FAILED
-  RETURN_INITIATED
-  RETURNED
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-}
-
-enum PayoutStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  PAID
-}
-
-enum CommissionStatus {
-  PENDING
-  APPROVED
-  CANCELLED
-}
 
 // ==========================================
 // User & Auth Management
@@ -58,7 +20,7 @@ model User {
   passwordHash  String?
   fullName      String
   phone         String?   @unique
-  role          UserRole  @default(CUSTOMER)
+  role          String    @default("CUSTOMER")
   isActive      Boolean   @default(true)
   isVerified    Boolean   @default(false)
   avatarUrl     String?
@@ -106,7 +68,7 @@ model Product {
   sweetness     Int              @default(3) // sweet scale 1-5
   isOrganic     Boolean          @default(true)
   originDistrict String
-  imageUrl      String[]
+  imageUrl      String
   isActive      Boolean          @default(true)
   seoTitle      String?
   seoDesc       String?
@@ -128,10 +90,10 @@ model ProductVariant {
   id          String     @id @default(uuid())
   productId   String
   sku         String     @unique
-  weightKg    Decimal    @db.Decimal(5, 2)
+  weightKg    Decimal
   boxCount    Int        @default(1)
-  price       Decimal    @db.Decimal(10, 2)
-  discount    Decimal    @default(0) @db.Decimal(10, 2)
+  price       Decimal
+  discount    Decimal    @default(0)
   
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -171,7 +133,7 @@ model Affiliate {
   userId         String           @unique
   referralCode   String           @unique
   paymentDetails String?          // Encrypted payout details
-  walletBalance  Decimal          @default(0) @db.Decimal(10, 2)
+  walletBalance  Decimal          @default(0)
   isActive       Boolean          @default(true)
   
   createdAt      DateTime         @default(now())
@@ -203,8 +165,8 @@ model AffiliateCommission {
   id          String           @id @default(uuid())
   affiliateId String
   orderId     String           @unique
-  amount      Decimal          @db.Decimal(10, 2)
-  status      CommissionStatus @default(PENDING)
+  amount      Decimal
+  status      String           @default("PENDING")
   notes       String?
   
   createdAt   DateTime         @default(now())
@@ -219,8 +181,8 @@ model AffiliateCommission {
 model WithdrawRequest {
   id          String       @id @default(uuid())
   affiliateId String
-  amount      Decimal      @db.Decimal(10, 2)
-  status      PayoutStatus @default(PENDING)
+  amount      Decimal
+  status      String       @default("PENDING")
   method      String       // Bank, SSLCommerz payout, bKash etc.
   txRef       String?      @unique
   notes       String?
@@ -240,10 +202,10 @@ model WithdrawRequest {
 model Order {
   id              String         @id @default(uuid())
   userId          String
-  status          OrderStatus    @default(PENDING)
-  totalAmount     Decimal        @db.Decimal(10, 2)
-  shippingCost    Decimal        @db.Decimal(10, 2)
-  discountApplied Decimal        @default(0) @db.Decimal(10, 2)
+  status          String         @default("PENDING")
+  totalAmount     Decimal
+  shippingCost    Decimal
+  discountApplied Decimal        @default(0)
   
   // Delivery & Logistics details
   shippingAddress String
@@ -276,7 +238,7 @@ model OrderItem {
   orderId   String
   variantId String
   quantity  Int
-  price     Decimal        @db.Decimal(10, 2) // Price locked at checkout
+  price     Decimal        // Price locked at checkout
 
   order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variant   ProductVariant @relation(fields: [variantId], references: [id])
@@ -288,10 +250,10 @@ model OrderItem {
 model Payment {
   id            String        @id @default(uuid())
   orderId       String        @unique
-  status        PaymentStatus @default(PENDING)
+  status        String        @default("PENDING")
   gateway       String        // STRIPE, SSLCOMMERZ, COD
   gatewayTxId   String?       @unique
-  amount        Decimal       @db.Decimal(10, 2)
+  amount        Decimal
   
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -304,9 +266,9 @@ model Payment {
 model Coupon {
   id             String    @id @default(uuid())
   code           String    @unique
-  discountPct    Decimal   @default(0) @db.Decimal(5, 2)
-  discountAmount Decimal   @default(0) @db.Decimal(10, 2)
-  minCartValue   Decimal   @default(0) @db.Decimal(10, 2)
+  discountPct    Decimal   @default(0)
+  discountAmount Decimal   @default(0)
+  minCartValue   Decimal   @default(0)
   expiryDate     DateTime
   usageLimit     Int       @default(100)
   usedCount      Int       @default(0)
@@ -327,7 +289,7 @@ model DeliveryZone {
   id           String   @id @default(uuid())
   name         String
   district     String
-  baseCharge   Decimal  @db.Decimal(10, 2)
+  baseCharge   Decimal
   isActive     Boolean  @default(true)
   
   orders       Order[]
@@ -416,7 +378,7 @@ model Transaction {
   id        String   @id @default(uuid())
   orderId   String
   type      String   // DEBIT, CREDIT
-  amount    Decimal  @db.Decimal(10, 2)
+  amount    Decimal
   channel   String   // MFS, STRIPE, CASH
   status    String   // SUCCESS, FAILED
   reference String?
