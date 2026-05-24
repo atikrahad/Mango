@@ -8,9 +8,9 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "db:generate": "npm run generate --workspace=database",
-    "db:migrate": "npm run migrate --workspace=database",
-    "db:seed": "npm run seed --workspace=database"
+    "db:generate": "npm run generate --workspace=@mangosteen/database",
+    "db:migrate": "npm run migrate --workspace=@mangosteen/database",
+    "db:seed": "npm run seed --workspace=@mangosteen/database"
   },
   "workspaces": [
     "apps/*",
