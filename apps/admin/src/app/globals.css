@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --font-outfit: "Outfit", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+body {
+  font-family: var(--font-inter), sans-serif;
+  scroll-behavior: smooth;
+  background-color: #09090b; /* zinc-950 */
+  color: #f4f4f5; /* zinc-100 */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-outfit), sans-serif;
+  color: #ffffff;
+}
+
+/* Custom Scrollbars for operations logs */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #18181b; /* zinc-900 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a; /* zinc-800 */
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981; /* emerald-500 */
+}
+
+/* Dark glassmorphic panels */
+.ops-panel {
+  background: rgba(18, 18, 24, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+.ops-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ops-panel-hover:hover {
+  background: rgba(24, 24, 32, 0.85);
+  border-color: rgba(16, 185, 129, 0.2); /* emerald accent glow */
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Cyber ambient glows */
+.ops-glow-emerald {
+  filter: blur(100px);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.ops-glow-gold {
+  filter: blur(100px);
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, rgba(0, 0, 0, 0) 70%);
+}
