@@ -8,10 +8,13 @@
 body {
   font-family: var(--font-inter), sans-serif;
   scroll-behavior: smooth;
+  background-color: #fafaf9; /* stone-50 */
+  color: #1c1917; /* stone-900 */
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-outfit), sans-serif;
+  color: #1c1917;
 }
 
 /* Custom Scrollbars */
@@ -21,43 +24,47 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617; /* slate-950 */
+  background: #f5f5f4; /* stone-100 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b; /* slate-800 */
+  background: #d6d3d1; /* stone-300 */
   border-radius: 9999px;
-  border: 2px solid #020617;
+  border: 2px solid #f5f5f4;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f59e0b; /* amber-500 */
+  background: #16a34a; /* emerald-600 */
 }
 
-/* Premium Utilities */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* Premium Light Organic Panel styling */
+.organic-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(22, 163, 74, 0.08); /* light emerald tint */
+  box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.03);
 }
 
-.glass-panel-hover:hover {
-  background: rgba(15, 23, 42, 0.6);
-  border-color: rgba(245, 158, 11, 0.3); /* amber-500 */
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.1);
-  transform: translateY(-2px);
+.organic-panel-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.organic-panel-hover:hover {
+  background: #ffffff;
+  border-color: rgba(22, 163, 74, 0.25); /* emerald accent border */
+  box-shadow: 0 12px 30px -4px rgba(22, 163, 74, 0.08);
+  transform: translateY(-2px);
 }
 
 /* Micro-animations */
 @keyframes pulse-slow {
   0%, 100% {
-    opacity: 0.15;
+    opacity: 0.08;
     transform: scale(1);
   }
   50% {
-    opacity: 0.25;
+    opacity: 0.15;
     transform: scale(1.05);
   }
 }
@@ -65,3 +72,15 @@ h1, h2, h3, h4, h5, h6 {
 .animate-pulse-slow {
   animation: pulse-slow 8s infinite ease-in-out;
 }
+
+/* Soft gold ambient glow */
+.ambient-gold-glow {
+  filter: blur(120px);
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.ambient-green-glow {
+  filter: blur(120px);
+  background: radial-gradient(circle, rgba(22, 163, 74, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+}
+

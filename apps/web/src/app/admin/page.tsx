@@ -14,11 +14,8 @@ export default function AdminPage() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Hardcoded delivery riders for demo assignment
-  const deliveryRiders = [
-    { id: 'rider1', name: 'Rider Rahim (Dhaka Zone)' },
-    { id: 'rider2', name: 'Rider Kamal (Rajshahi Zone)' },
-  ];
+  // Dynamic delivery riders list
+  const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
 
   // Notification Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -31,9 +28,10 @@ export default function AdminPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [ordRes, witRes] = await Promise.all([
+      const [ordRes, witRes, riderRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
+        api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
       if (ordRes.data?.success) {
@@ -41,6 +39,9 @@ export default function AdminPage() {
       }
       if (witRes.data?.success) {
         setWithdrawals(witRes.data.data);
+      }
+      if (riderRes.data?.success) {
+        setDeliveryRiders(riderRes.data.data);
       }
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
@@ -241,7 +242,7 @@ export default function AdminPage() {
                       >
                         <option value="">Choose Agent</option>
                         {deliveryRiders.map((r) => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
+                          <option key={r.id} value={r.id}>{r.fullName || r.name} ({r.email})</option>
                         ))}
                       </select>
                     </td>

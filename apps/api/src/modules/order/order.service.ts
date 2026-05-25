@@ -314,4 +314,19 @@ export class OrderService {
       data: updated,
     };
   }
+
+  async getDeliveryRiders() {
+    const riders = await this.prisma.user.findMany({
+      where: { role: 'DELIVERY_AGENT', isActive: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+      },
+    });
+    return {
+      success: true,
+      data: riders,
+    };
+  }
 }
