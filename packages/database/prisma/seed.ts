@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 export const UserRole = {
   CUSTOMER: 'CUSTOMER',
@@ -160,6 +161,92 @@ async function main() {
     }
   }
   console.log('🚚 Shipping Logistics zones seeded.');
+
+  // 6. Seed demo users with hashed passwords for Quick Role Switcher
+  const demoPassword = await bcrypt.hash('password123', 10);
+
+  const customer = await prisma.user.upsert({
+    where: { email: 'customer@mangosteen.com' },
+    update: { passwordHash: demoPassword },
+    create: {
+      email: 'customer@mangosteen.com',
+      fullName: 'Customer Karim',
+      role: UserRole.CUSTOMER,
+      isActive: true,
+      isVerified: true,
+      phone: '+8801600000002',
+      passwordHash: demoPassword,
+    },
+  });
+  console.log(`👤 Demo Customer seeded: ${customer.email}`);
+
+  const affiliateUser = await prisma.user.upsert({
+    where: { email: 'affiliate1@mangosteen.com' },
+    update: { passwordHash: demoPassword },
+    create: {
+      email: 'affiliate1@mangosteen.com',
+      fullName: 'Affiliate Anis',
+      role: UserRole.AFFILIATE,
+      isActive: true,
+      isVerified: true,
+      phone: '+8801600000003',
+      passwordHash: demoPassword,
+    },
+  });
+
+  // Create affiliate profile if it doesn't exist
+  const existingAffiliate = await prisma.affiliate.findUnique({ where: { userId: affiliateUser.id } });
+  if (!existingAffiliate) {
+    await prisma.affiliate.create({
+      data: {
+        userId: affiliateUser.id,
+        referralCode: 'aff_DEMO01',
+        walletBalance: 0,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`🤝 Demo Affiliate seeded: ${affiliateUser.email}`);
+
+  // Also update Super Admin with password
+  await prisma.user.update({
+    where: { email: 'superadmin@mangosteen.com' },
+    data: { passwordHash: demoPassword },
+  });
+  await prisma.user.update({
+    where: { email: 'rider1@mangosteen.com' },
+    data: { passwordHash: demoPassword },
+  });
+  console.log('🔑 Demo passwords applied to all seeded users (password123).');
+
+  // 7. Seed Coupon Codes
+  const coupons = [
+    {
+      code: 'MANGO10',
+      discountPct: 10,
+      discountAmount: 0,
+      minCartValue: 0,
+      expiryDate: new Date('2027-12-31'),
+      usageLimit: 1000,
+    },
+    {
+      code: 'FREE500',
+      discountPct: 0,
+      discountAmount: 500,
+      minCartValue: 2000,
+      expiryDate: new Date('2027-12-31'),
+      usageLimit: 500,
+    },
+  ];
+
+  for (const coupon of coupons) {
+    await prisma.coupon.upsert({
+      where: { code: coupon.code },
+      update: {},
+      create: { ...coupon, isActive: true },
+    });
+  }
+  console.log('🎟️ Coupon codes seeded: MANGO10, FREE500.');
 
   console.log('🎉 Database seeding completed successfully!');
 }

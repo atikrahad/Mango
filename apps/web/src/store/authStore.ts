@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface UserProfile {
   id: string;
@@ -16,18 +17,25 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
-  user: null,
-  isAuthenticated: false,
-  setSession: (token, user) => set({
-    accessToken: token,
-    user,
-    isAuthenticated: true,
-  }),
-  logout: () => set({
-    accessToken: null,
-    user: null,
-    isAuthenticated: false,
-  }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      user: null,
+      isAuthenticated: false,
+      setSession: (token, user) => set({
+        accessToken: token,
+        user,
+        isAuthenticated: true,
+      }),
+      logout: () => set({
+        accessToken: null,
+        user: null,
+        isAuthenticated: false,
+      }),
+    }),
+    {
+      name: 'mangosteen-auth',
+    }
+  )
+);
