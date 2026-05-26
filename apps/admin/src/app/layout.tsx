@@ -29,9 +29,9 @@ export default function RootLayout({
       lang="en"
       className={`${outfit.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-[#09090b] text-[#f4f4f5] selection:bg-[#10b981] selection:text-black">
-        {/* Ops Neon Glows */}
-        <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none opacity-50">
+      <body className="min-h-full flex flex-col font-sans bg-[#f8fafc] text-[#334155] selection:bg-[#10b981] selection:text-white">
+        {/* Ops Ambient Glows */}
+        <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none opacity-40">
           <div className="absolute top-0 left-1/4 w-[50%] h-[50%] rounded-full ops-glow-emerald pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[50%] h-[50%] rounded-full ops-glow-gold pointer-events-none" />
         </div>
