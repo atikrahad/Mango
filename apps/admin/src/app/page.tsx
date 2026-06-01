@@ -8,7 +8,8 @@ import {
   RefreshCw, CheckCircle2, XCircle, ChevronRight, Star, Info, Lock,
   TrendingUp, Award, Wallet, ArrowUpRight, Copy, Clock, Share2, Compass, 
   AlertCircle, Eye, LogOut, ArrowRight, UserPlus, ShieldAlert, BarChart3,
-  Menu, X, Landmark, Activity, Layers, Shield
+  Menu, X, Landmark, Activity, Layers, Shield,
+  Plus, Edit, Trash2, Settings, Check, Image, Search, Sparkles, Globe, Percent, Package
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -41,6 +42,53 @@ export default function AdminPortalPage() {
   const [orderSearch, setOrderSearch] = useState('');
   const [districtFilter, setDistrictFilter] = useState('ALL');
 
+  // Product & Catalog States
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  
+  // Product Search/Filter states
+  const [productSearch, setProductSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [activeStatusFilter, setActiveStatusFilter] = useState('ALL');
+  const [districtFilterCatalog, setDistrictFilterCatalog] = useState('ALL');
+
+  // Product Create/Edit Form State
+  const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    categoryId: '',
+    sweetness: 3,
+    isOrganic: true,
+    originDistrict: 'Rajshahi',
+    imageUrl: '',
+    seoTitle: '',
+    seoDesc: '',
+    isActive: true,
+    sku: '',
+    weightKg: '1',
+    boxCount: '1',
+    price: '',
+    discount: '0',
+    initialStock: '100',
+  });
+
+  // Variant management drawer state
+  const [isVariantDrawerOpen, setIsVariantDrawerOpen] = useState(false);
+  const [managingProduct, setManagingProduct] = useState<any>(null);
+  const [isAddingVariant, setIsAddingVariant] = useState(false);
+  const [variantForm, setVariantForm] = useState({
+    sku: '',
+    weightKg: '1',
+    boxCount: '1',
+    price: '',
+    discount: '0',
+    availableStock: '100',
+  });
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+
   // Withdrawal Payout form state (Affiliate)
   const [withdrawAmount, setWithdrawAmount] = useState('500');
   const [withdrawMethod, setWithdrawMethod] = useState('BKASH');
@@ -63,10 +111,12 @@ export default function AdminPortalPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [ordRes, witRes, riderRes] = await Promise.all([
+      const [ordRes, witRes, riderRes, prodRes, catRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
         api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
+        api.get('/catalog/products?includeInactive=true'),
+        api.get('/catalog/categories'),
       ]);
 
       if (ordRes.data?.success) {
@@ -77,6 +127,12 @@ export default function AdminPortalPage() {
       }
       if (riderRes.data?.success) {
         setDeliveryRiders(riderRes.data.data);
+      }
+      if (prodRes.data?.success) {
+        setProducts(prodRes.data.data.items);
+      }
+      if (catRes.data?.success) {
+        setCategories(catRes.data.data);
       }
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
@@ -227,6 +283,285 @@ export default function AdminPortalPage() {
     setLinkCopied(true);
     showToast('Campaign referral link copied to clipboard!', 'success');
     setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  // Auto-generate slug from name on creation
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!editingProduct) {
+      const generatedSlug = val
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+      setProductForm(prev => ({
+        ...prev,
+        name: val,
+        slug: generatedSlug,
+        seoTitle: val ? `${val} | Buy Organic Mangoes` : '',
+      }));
+    } else {
+      setProductForm(prev => ({ ...prev, name: val }));
+    }
+  };
+
+  // Product Actions
+  const openCreateProduct = () => {
+    setEditingProduct(null);
+    setProductForm({
+      name: '',
+      slug: '',
+      description: '',
+      categoryId: categories[0]?.id || '',
+      sweetness: 3,
+      isOrganic: true,
+      originDistrict: 'Rajshahi',
+      imageUrl: '',
+      seoTitle: '',
+      seoDesc: '',
+      isActive: true,
+      sku: '',
+      weightKg: '1',
+      boxCount: '1',
+      price: '',
+      discount: '0',
+      initialStock: '100',
+    });
+    setIsProductDrawerOpen(true);
+  };
+
+  const openEditProduct = (product: any) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      categoryId: product.categoryId,
+      sweetness: product.sweetness,
+      isOrganic: product.isOrganic,
+      originDistrict: product.originDistrict,
+      imageUrl: Array.isArray(product.imageUrl) ? product.imageUrl[0] || '' : product.imageUrl || '',
+      seoTitle: product.seoTitle || '',
+      seoDesc: product.seoDesc || '',
+      isActive: product.isActive,
+      sku: '',
+      weightKg: '1',
+      boxCount: '1',
+      price: '',
+      discount: '0',
+      initialStock: '100',
+    });
+    setIsProductDrawerOpen(true);
+  };
+
+  const handleProductFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productForm.name || !productForm.slug || !productForm.description) {
+      showToast('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    try {
+      if (editingProduct) {
+        // Update mode
+        const res = await api.patch(`/catalog/products/${editingProduct.id}`, {
+          name: productForm.name,
+          slug: productForm.slug,
+          description: productForm.description,
+          categoryId: productForm.categoryId,
+          sweetness: Number(productForm.sweetness),
+          isOrganic: productForm.isOrganic,
+          originDistrict: productForm.originDistrict,
+          imageUrl: productForm.imageUrl,
+          seoTitle: productForm.seoTitle,
+          seoDesc: productForm.seoDesc,
+          isActive: productForm.isActive,
+        });
+        if (res.data?.success) {
+          showToast('Product details updated successfully!', 'success');
+          setIsProductDrawerOpen(false);
+          fetchAdminData();
+        }
+      } else {
+        // Create mode
+        // 1. Create product
+        const prodRes = await api.post('/catalog/products', {
+          name: productForm.name,
+          slug: productForm.slug,
+          description: productForm.description,
+          categoryId: productForm.categoryId,
+          sweetness: Number(productForm.sweetness),
+          isOrganic: productForm.isOrganic,
+          originDistrict: productForm.originDistrict,
+          imageUrl: productForm.imageUrl,
+          seoTitle: productForm.seoTitle,
+          seoDesc: productForm.seoDesc,
+          isActive: productForm.isActive,
+        });
+
+        if (prodRes.data?.success && prodRes.data?.data?.id) {
+          const newProductId = prodRes.data.data.id;
+          
+          // 2. Create initial variant
+          if (productForm.sku && productForm.price) {
+            await api.post('/catalog/variants', {
+              productId: newProductId,
+              sku: productForm.sku,
+              weightKg: Number(productForm.weightKg),
+              boxCount: Number(productForm.boxCount),
+              price: Number(productForm.price),
+              discount: Number(productForm.discount || 0),
+              initialStock: Number(productForm.initialStock || 100),
+            });
+          }
+          showToast('Product and base variant created successfully!', 'success');
+          setIsProductDrawerOpen(false);
+          fetchAdminData();
+        }
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.response?.data?.error?.message || 'Failed to save product details.';
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this product? This will soft delete the product and make it unavailable.')) {
+      return;
+    }
+
+    try {
+      const res = await api.delete(`/catalog/products/${id}`);
+      if (res.data?.success) {
+        showToast('Product successfully archived.', 'success');
+        fetchAdminData();
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || 'Failed to delete product.';
+      showToast(msg, 'error');
+    }
+  };
+
+  const toggleProductActive = async (product: any) => {
+    try {
+      const res = await api.patch(`/catalog/products/${product.id}`, {
+        isActive: !product.isActive,
+      });
+      if (res.data?.success) {
+        showToast(`Product ${!product.isActive ? 'activated' : 'deactivated'} successfully!`, 'success');
+        fetchAdminData();
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || 'Failed to update product state.';
+      showToast(msg, 'error');
+    }
+  };
+
+  // Variant Actions
+  const openVariantManagement = async (product: any) => {
+    setManagingProduct(product);
+    setIsAddingVariant(false);
+    setEditingVariantId(null);
+    setVariantForm({
+      sku: '',
+      weightKg: '1',
+      boxCount: '1',
+      price: '',
+      discount: '0',
+      availableStock: '100',
+    });
+    setIsVariantDrawerOpen(true);
+  };
+
+  const handleVariantFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!variantForm.sku || !variantForm.price) {
+      showToast('Please specify Variant SKU and Price.', 'error');
+      return;
+    }
+
+    try {
+      if (editingVariantId) {
+        // Update variant
+        const res = await api.patch(`/catalog/variants/${editingVariantId}`, {
+          sku: variantForm.sku,
+          weightKg: Number(variantForm.weightKg),
+          boxCount: Number(variantForm.boxCount),
+          price: Number(variantForm.price),
+          discount: Number(variantForm.discount),
+          availableStock: Number(variantForm.availableStock),
+        });
+        if (res.data?.success) {
+          showToast('Product variant updated successfully!', 'success');
+          setEditingVariantId(null);
+          setIsAddingVariant(false);
+          // Refresh managing product details
+          const refreshed = await api.get(`/catalog/products/${managingProduct.slug}`);
+          if (refreshed.data?.success) {
+            setManagingProduct(refreshed.data.data);
+          }
+          fetchAdminData();
+        }
+      } else {
+        // Create variant
+        const res = await api.post('/catalog/variants', {
+          productId: managingProduct.id,
+          sku: variantForm.sku,
+          weightKg: Number(variantForm.weightKg),
+          boxCount: Number(variantForm.boxCount),
+          price: Number(variantForm.price),
+          discount: Number(variantForm.discount),
+          initialStock: Number(variantForm.availableStock),
+        });
+        if (res.data?.success) {
+          showToast('New variant added to catalog!', 'success');
+          setIsAddingVariant(false);
+          // Refresh managing product details
+          const refreshed = await api.get(`/catalog/products/${managingProduct.slug}`);
+          if (refreshed.data?.success) {
+            setManagingProduct(refreshed.data.data);
+          }
+          fetchAdminData();
+        }
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.response?.data?.error?.message || 'Failed to save variant details.';
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: string) => {
+    if (!window.confirm('Are you sure you want to delete this variant?')) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/catalog/variants/${variantId}`);
+      if (res.data?.success) {
+        showToast('Variant successfully removed.', 'success');
+        // Refresh managing product details
+        const refreshed = await api.get(`/catalog/products/${managingProduct.slug}`);
+        if (refreshed.data?.success) {
+          setManagingProduct(refreshed.data.data);
+        }
+        fetchAdminData();
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || 'Failed to delete variant.';
+      showToast(msg, 'error');
+    }
+  };
+
+  const startEditVariant = (variant: any) => {
+    setEditingVariantId(variant.id);
+    setIsAddingVariant(true);
+    setVariantForm({
+      sku: variant.sku,
+      weightKg: variant.weightKg.toString(),
+      boxCount: variant.boxCount.toString(),
+      price: variant.price.toString(),
+      discount: variant.discount.toString(),
+      availableStock: (variant.inventory?.availableStock || 0).toString(),
+    });
   };
 
   // Trigger sync on load or user role changes
@@ -505,6 +840,18 @@ export default function AdminPortalPage() {
                 {orders.length > 0 && (
                   <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md">
                     {orders.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setActiveSubTab('products'); setIsMobileMenuOpen(false); }}
+                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'products' ? 'ops-nav-item-active' : ''}`}
+              >
+                <Layers className="w-4 h-4" /> Products Catalog
+                {products.length > 0 && (
+                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md">
+                    {products.length}
                   </span>
                 )}
               </button>
@@ -838,16 +1185,779 @@ export default function AdminPortalPage() {
                           </td>
                         </tr>
                       ))}
-                      {filteredOrders.length === 0 && (
-                        <tr>
-                          <td colSpan={8} className="text-center py-12 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                            No seasonal checkouts match the search logs.
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: PRODUCTS CATALOG */}
+            {activeSubTab === 'products' && (
+              <div className="flex flex-col gap-6 w-full animate-fadeIn">
+                
+                {/* Metrics row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="ops-panel p-5 rounded-2xl flex flex-col gap-2 ops-panel-hover">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Catalog Products</p>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-3xl font-black text-slate-800">{products.length}</span>
+                      <Package className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Total unique fruit varieties</p>
+                  </div>
+
+                  <div className="ops-panel p-5 rounded-2xl flex flex-col gap-2 ops-panel-hover">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Inventory Stock</p>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-3xl font-black text-slate-800">
+                        {products.reduce((sum, p) => sum + (p.variants?.reduce((s: number, v: any) => s + (v.inventory?.availableStock || 0), 0) || 0), 0)}
+                      </span>
+                      <TrendingUp className="w-5 h-5 text-sky-500" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Available boxes in reserve batches</p>
+                  </div>
+
+                  <div className="ops-panel p-5 rounded-2xl flex flex-col gap-2 ops-panel-hover">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active Varieties</p>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-3xl font-black text-emerald-600">
+                        {products.filter(p => p.isActive).length}
+                      </span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Live and visible to shoppers</p>
+                  </div>
+
+                  <div className="ops-panel p-5 rounded-2xl flex flex-col gap-2 ops-panel-hover">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-rose-500">Low Stock Warnings</p>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-3xl font-black text-rose-600">
+                        {products.filter(p => p.variants?.some((v: any) => (v.inventory?.availableStock || 0) < 15)).length}
+                      </span>
+                      <AlertTriangle className="w-5 h-5 text-rose-500 animate-pulse-soft" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Varieties with boxes under 15 units</p>
+                  </div>
+                </div>
+
+                {/* Table Ops panel */}
+                <div className="ops-panel p-6 rounded-3xl flex flex-col gap-6 shadow-xl">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-800 mb-1">Catalog Fruit Operations Ledgers</h3>
+                      <p className="text-xs text-slate-400 font-semibold">Publish new harvest batches, organize descriptions, optimize prices, and audit organic logistics.</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2.5 items-center">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search product..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 w-44 font-medium"
+                        />
+                      </div>
+
+                      <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 font-extrabold cursor-pointer"
+                      >
+                        <option value="ALL">All Categories</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.slug}>{c.name}</option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={districtFilterCatalog}
+                        onChange={(e) => setDistrictFilterCatalog(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 font-extrabold cursor-pointer"
+                      >
+                        <option value="ALL">All Districts</option>
+                        <option value="Rajshahi">Rajshahi</option>
+                        <option value="Chapainawabganj">Chapainawabganj</option>
+                        <option value="Satkhira">Satkhira</option>
+                        <option value="Dinajpur">Dinajpur</option>
+                        <option value="Rangpur">Rangpur</option>
+                      </select>
+
+                      <select
+                        value={activeStatusFilter}
+                        onChange={(e) => setActiveStatusFilter(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 font-extrabold cursor-pointer"
+                      >
+                        <option value="ALL">All Status</option>
+                        <option value="ACTIVE">Active (Live)</option>
+                        <option value="INACTIVE">Inactive (Draft)</option>
+                      </select>
+
+                      <button
+                        onClick={openCreateProduct}
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Publish Variety
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto min-h-[300px]">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+                          <th className="pb-3 pr-2">Fruit Thumbnail</th>
+                          <th className="pb-3 pr-2">Details</th>
+                          <th className="pb-3 pr-2">Category / Origin</th>
+                          <th className="pb-3 pr-2">Sweetness / Organic</th>
+                          <th className="pb-3 pr-2">Live Status</th>
+                          <th className="pb-3 pr-2">Variants Price</th>
+                          <th className="pb-3 text-right">Operational Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {products
+                          .filter(p => {
+                            const matchSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.description.toLowerCase().includes(productSearch.toLowerCase());
+                            const matchCat = categoryFilter === 'ALL' || p.category?.slug === categoryFilter;
+                            const matchDist = districtFilterCatalog === 'ALL' || p.originDistrict?.toLowerCase() === districtFilterCatalog.toLowerCase();
+                            const matchAct = activeStatusFilter === 'ALL' || (activeStatusFilter === 'ACTIVE' ? p.isActive : !p.isActive);
+                            return matchSearch && matchCat && matchDist && matchAct;
+                          })
+                          .map(product => {
+                            const imgUrl = Array.isArray(product.imageUrl) ? product.imageUrl[0] : product.imageUrl;
+                            
+                            // Calculate Price Range
+                            const prices = product.variants?.map((v: any) => Number(v.price)) || [];
+                            const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                            const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+                            const priceRange = minPrice === maxPrice ? `${minPrice} BDT` : `${minPrice} - ${maxPrice} BDT`;
+                            
+                            return (
+                              <tr key={product.id} className="hover:bg-slate-50/50 transition">
+                                <td className="py-4 pr-2">
+                                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/60 overflow-hidden flex items-center justify-center relative shadow-sm">
+                                    {imgUrl ? (
+                                      <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-xl">🥭</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-4 pr-2">
+                                  <div className="font-extrabold text-slate-800">{product.name}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">slug: {product.slug}</div>
+                                </td>
+                                <td className="py-4 pr-2">
+                                  <span className="bg-slate-100 text-slate-655 border border-slate-200/50 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                    {product.category?.name || 'Uncategorized'}
+                                  </span>
+                                  <div className="text-[10px] text-slate-400 font-bold mt-1">📍 {product.originDistrict}</div>
+                                </td>
+                                <td className="py-4 pr-2">
+                                  <div className="flex gap-0.5 items-center">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <Star key={star} className={`w-3 h-3 ${star <= product.sweetness ? 'text-amber-500 fill-amber-500' : 'text-slate-200'}`} />
+                                    ))}
+                                  </div>
+                                  <div className="mt-1">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                      product.isOrganic ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                    }`}>
+                                      {product.isOrganic ? 'Organic 🌿' : 'Standard'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-4 pr-2">
+                                  <button
+                                    onClick={() => toggleProductActive(product)}
+                                    className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase transition cursor-pointer border ${
+                                      product.isActive 
+                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200/40 hover:bg-emerald-100' 
+                                        : 'bg-rose-50 text-rose-600 border-rose-200/40 hover:bg-rose-100'
+                                    }`}
+                                  >
+                                    {product.isActive ? 'Active' : 'Inactive'}
+                                  </button>
+                                </td>
+                                <td className="py-4 pr-2">
+                                  <div className="font-extrabold text-slate-800">{priceRange}</div>
+                                  <div className="text-[9px] text-slate-400 font-semibold mt-0.5">({product.variants?.length || 0} variants)</div>
+                                </td>
+                                <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                                  <button
+                                    onClick={() => openVariantManagement(product)}
+                                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer flex items-center gap-1 shadow-sm"
+                                    title="Manage Variants & Inventory Stock"
+                                  >
+                                    <Package className="w-3.5 h-3.5 text-sky-500" /> Variants ({product.variants?.length || 0})
+                                  </button>
+                                  <button
+                                    onClick={() => openEditProduct(product)}
+                                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
+                                    title="Edit details"
+                                  >
+                                    <Edit className="w-3.5 h-3.5 text-amber-500" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(product.id)}
+                                    className="bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-350 text-rose-600 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
+                                    title="Archive Variety"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        {products.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="text-center py-16 text-slate-400 font-extrabold uppercase tracking-wider text-xs">
+                              No products published in seasonal catalog list.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* DRAWER 1: CREATE / EDIT PRODUCT */}
+                {isProductDrawerOpen && (
+                  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
+                    <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col justify-between animate-slideLeft">
+                      
+                      {/* Drawer Header */}
+                      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div>
+                          <h3 className="font-extrabold text-base text-slate-800">
+                            {editingProduct ? 'Edit Catalog Product Details' : 'Publish New Harvest Variety'}
+                          </h3>
+                          <p className="text-[11px] text-slate-400">Sensory checks, variety names, categories descriptions and meta tags configurations.</p>
+                        </div>
+                        <button
+                          onClick={() => setIsProductDrawerOpen(false)}
+                          className="p-2 text-slate-400 hover:text-slate-800 transition cursor-pointer"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Drawer Body Form */}
+                      <form onSubmit={handleProductFormSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+                        
+                        {/* Two Column details layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Variety Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={productForm.name}
+                              onChange={handleNameChange}
+                              placeholder="e.g. Premium Rajshahi Langra"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-bold"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Slug (Unique URL) *</label>
+                            <input
+                              type="text"
+                              required
+                              value={productForm.slug}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, slug: e.target.value }))}
+                              placeholder="e.g. rajshahi-langra"
+                              disabled={!!editingProduct}
+                              className="w-full bg-slate-150 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-mono disabled:opacity-60"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Category Category *</label>
+                            <select
+                              value={productForm.categoryId}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-800 font-extrabold cursor-pointer"
+                            >
+                              {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Origin District District *</label>
+                            <select
+                              value={productForm.originDistrict}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, originDistrict: e.target.value }))}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-800 font-extrabold cursor-pointer"
+                            >
+                              <option value="Rajshahi">Rajshahi</option>
+                              <option value="Chapainawabganj">Chapainawabganj</option>
+                              <option value="Satkhira">Satkhira</option>
+                              <option value="Dinajpur">Dinajpur</option>
+                              <option value="Rangpur">Rangpur</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Product Description *</label>
+                          <textarea
+                            required
+                            rows={3}
+                            value={productForm.description}
+                            onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Provide sensory details, aroma, taste notes and box weight sizing configurations..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-medium"
+                          />
+                        </div>
+
+                        {/* Visual Sweetness slider & Organic switch row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
+                          
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                              Sweetness Level: <b className="text-amber-500">{productForm.sweetness} / 5</b>
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="5"
+                              value={productForm.sweetness}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, sweetness: Number(e.target.value) }))}
+                              className="w-full accent-amber-550 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] text-slate-400 font-bold mt-1">
+                              <span>Subtle</span>
+                              <span>Moderate</span>
+                              <span>Extremely Sweet</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-slate-655 font-bold uppercase tracking-wider">Organic Enforcement</span>
+                              <span className="text-[9px] text-slate-400">🌿 Enforce strictly chemical-free checks</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={productForm.isOrganic}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, isOrganic: e.target.checked }))}
+                              className="w-4 h-4 rounded text-emerald-500 accent-emerald-500 cursor-pointer"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Image URL and status row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Image Resource Link</label>
+                            <input
+                              type="url"
+                              value={productForm.imageUrl}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                              placeholder="e.g. https://images.unsplash.com/photo-xxx"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-mono"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/60">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-slate-655 font-bold uppercase tracking-wider">Catalog Visibility</span>
+                              <span className="text-[9px] text-slate-400">Instantly visible in customer lists</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={productForm.isActive}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                              className="w-4 h-4 rounded text-emerald-500 accent-emerald-500 cursor-pointer"
+                            />
+                          </div>
+                        </div>
+
+                        {/* SEO Fields Accordion */}
+                        <div className="border border-slate-200 rounded-2xl p-4 flex flex-col gap-4">
+                          <h4 className="text-[10px] text-slate-800 font-black uppercase tracking-wider flex items-center gap-1.5">
+                            <Globe className="w-4 h-4 text-emerald-500" /> SEO Metadata Optimization
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">SEO Title Tag</span>
+                              <input
+                                type="text"
+                                value={productForm.seoTitle}
+                                onChange={(e) => setProductForm(prev => ({ ...prev, seoTitle: e.target.value }))}
+                                placeholder="Auto-generated meta title"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-[11px] focus:outline-none focus:border-emerald-500 text-slate-700"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">SEO Meta Description</span>
+                              <input
+                                type="text"
+                                value={productForm.seoDesc}
+                                onChange={(e) => setProductForm(prev => ({ ...prev, seoDesc: e.target.value }))}
+                                placeholder="Meta description snippets..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-[11px] focus:outline-none focus:border-emerald-500 text-slate-700"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BASE VARIANT FIELD: Only shown on creation mode! */}
+                        {!editingProduct && (
+                          <div className="border border-sky-200 bg-sky-50/20 rounded-2xl p-5 flex flex-col gap-4">
+                            <h4 className="text-[10px] text-sky-850 font-black uppercase tracking-wider flex items-center gap-1.5">
+                              <Package className="w-4 h-4 text-sky-500" /> Base Product Variant Configuration
+                            </h4>
+                            <p className="text-[10px] text-sky-700/80 leading-relaxed -mt-1">Publishing a variety requires at least one variant configuration (e.g. 5KG Box, 10KG Carton) to enable checks and order checkout processing.</p>
+                            
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">SKU Code *</span>
+                                <input
+                                  type="text"
+                                  required={!editingProduct}
+                                  value={productForm.sku}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, sku: e.target.value }))}
+                                  placeholder="e.g. PL-RJ-5KG"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">Weight (KG) *</span>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  required={!editingProduct}
+                                  value={productForm.weightKg}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, weightKg: e.target.value }))}
+                                  placeholder="5.0"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">Mango Box Count *</span>
+                                <input
+                                  type="number"
+                                  required={!editingProduct}
+                                  value={productForm.boxCount}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, boxCount: e.target.value }))}
+                                  placeholder="1"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">Base Price (BDT) *</span>
+                                <input
+                                  type="number"
+                                  required={!editingProduct}
+                                  value={productForm.price}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                                  placeholder="450"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono font-bold text-sky-655"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">Discount amount (BDT)</span>
+                                <input
+                                  type="number"
+                                  value={productForm.discount}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, discount: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] text-sky-800 font-bold uppercase tracking-wider">Initial Stock Reserve *</span>
+                                <input
+                                  type="number"
+                                  required={!editingProduct}
+                                  value={productForm.initialStock}
+                                  onChange={(e) => setProductForm(prev => ({ ...prev, initialStock: e.target.value }))}
+                                  placeholder="100"
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                      </form>
+
+                      {/* Drawer Footer Actions */}
+                      <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50">
+                        <button
+                          type="button"
+                          onClick={() => setIsProductDrawerOpen(false)}
+                          className="bg-white border border-slate-250 hover:bg-slate-100 text-slate-700 text-xs font-black px-4 py-2.5 rounded-xl transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          onClick={handleProductFormSubmit}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-500/10 cursor-pointer transition-all"
+                        >
+                          {editingProduct ? 'Save details' : 'Publish Product'}
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* DRAWER 2: VARIANTS & INVENTORY MANAGEMENT */}
+                {isVariantDrawerOpen && managingProduct && (
+                  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
+                    <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col justify-between animate-slideLeft">
+                      
+                      {/* Drawer Header */}
+                      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Variety Variant Console</span>
+                          <h3 className="font-extrabold text-base text-slate-800 mt-1">
+                            {managingProduct.name}
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() => setIsVariantDrawerOpen(false)}
+                          className="p-2 text-slate-400 hover:text-slate-800 transition cursor-pointer"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Drawer Body details */}
+                      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        
+                        {/* Summary of product details */}
+                        <div className="bg-slate-50 p-4 border border-slate-200/60 rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-650 flex items-center justify-center font-black text-lg">
+                              🥭
+                            </div>
+                            <div>
+                              <p className="font-extrabold text-slate-800 text-xs">{managingProduct.name}</p>
+                              <p className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {managingProduct.id}</p>
+                            </div>
+                          </div>
+                          <span className="bg-emerald-50 text-emerald-655 px-2.5 py-0.5 rounded text-[10px] font-black uppercase">
+                            {managingProduct.category?.name || 'Category'}
+                          </span>
+                        </div>
+
+                        {/* List of existing variants */}
+                        <div>
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Variant Box Configurations</h4>
+                            {!isAddingVariant && (
+                              <button
+                                onClick={() => {
+                                  setIsAddingVariant(true);
+                                  setEditingVariantId(null);
+                                  setVariantForm({
+                                    sku: `${managingProduct.slug.substring(0, 8).toUpperCase()}-${Date.now().toString().slice(-4)}`,
+                                    weightKg: '5',
+                                    boxCount: '1',
+                                    price: '400',
+                                    discount: '0',
+                                    availableStock: '100',
+                                  });
+                                }}
+                                className="bg-sky-50 text-sky-655 border border-sky-200/40 hover:bg-sky-100 text-[10px] font-black px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" /> Add Variant
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Variant Addition Form (Inline toggled) */}
+                          {isAddingVariant && (
+                            <form onSubmit={handleVariantFormSubmit} className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 flex flex-col gap-4 animate-scaleUp">
+                              <h5 className="text-[10px] text-slate-800 font-black uppercase tracking-wider">
+                                {editingVariantId ? 'Modify Active Variant Details' : 'Configure New Box Size'}
+                              </h5>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">SKU Code *</span>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={variantForm.sku}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, sku: e.target.value }))}
+                                    placeholder="PL-RJ-5KG"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Weight (KG) *</span>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    required
+                                    value={variantForm.weightKg}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, weightKg: e.target.value }))}
+                                    placeholder="5.0"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Mango Box Count *</span>
+                                  <input
+                                    type="number"
+                                    required
+                                    value={variantForm.boxCount}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, boxCount: e.target.value }))}
+                                    placeholder="1"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Price (BDT) *</span>
+                                  <input
+                                    type="number"
+                                    required
+                                    value={variantForm.price}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, price: e.target.value }))}
+                                    placeholder="450"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono font-bold"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Discount (BDT)</span>
+                                  <input
+                                    type="number"
+                                    value={variantForm.discount}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, discount: e.target.value }))}
+                                    placeholder="0"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Available Stock *</span>
+                                  <input
+                                    type="number"
+                                    required
+                                    value={variantForm.availableStock}
+                                    onChange={(e) => setVariantForm(prev => ({ ...prev, availableStock: e.target.value }))}
+                                    placeholder="100"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-mono"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => { setIsAddingVariant(false); setEditingVariantId(null); }}
+                                  className="bg-white border border-slate-250 hover:bg-slate-100 text-slate-655 text-[10px] font-black px-3.5 py-1.5 rounded-xl transition cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  onClick={handleVariantFormSubmit}
+                                  className="bg-gradient-to-r from-sky-500 to-sky-655 text-white font-black px-4 py-1.5 rounded-xl text-[10px] cursor-pointer shadow-sm transition"
+                                >
+                                  {editingVariantId ? 'Save Variant' : 'Publish Box'}
+                                </button>
+                              </div>
+                            </form>
+                          )}
+
+                          {/* Variants list table */}
+                          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-black uppercase tracking-wider text-[9px]">
+                                  <th className="p-3">SKU</th>
+                                  <th className="p-3">Weight / Box</th>
+                                  <th className="p-3">Price</th>
+                                  <th className="p-3">Discount</th>
+                                  <th className="p-3">Stock Available</th>
+                                  <th className="p-3 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {managingProduct.variants?.map((v: any) => (
+                                  <tr key={v.id} className="hover:bg-slate-50/50 transition">
+                                    <td className="p-3 font-mono font-black text-slate-655">{v.sku}</td>
+                                    <td className="p-3 font-semibold text-slate-600">⚖ {v.weightKg} KG ({v.boxCount} Count)</td>
+                                    <td className="p-3 font-black text-slate-800">{v.price} BDT</td>
+                                    <td className="p-3 font-bold text-rose-500">-{v.discount || 0} BDT</td>
+                                    <td className="p-3">
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-black font-mono border ${
+                                        (v.inventory?.availableStock || 0) < 15 
+                                          ? 'bg-rose-50 text-rose-600 border-rose-200/50' 
+                                          : 'bg-emerald-50 text-emerald-600 border-emerald-200/50'
+                                      }`}>
+                                        {v.inventory?.availableStock || 0} units
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-right flex justify-end gap-1">
+                                      <button
+                                        onClick={() => startEditVariant(v)}
+                                        className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 p-1 rounded-lg cursor-pointer"
+                                        title="Edit Stock & Pricing"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteVariant(v.id)}
+                                        className="bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-500 p-1 rounded-lg cursor-pointer"
+                                        title="Delete Variant"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                                {(!managingProduct.variants || managingProduct.variants.length === 0) && (
+                                  <tr>
+                                    <td colSpan={6} className="text-center py-10 text-slate-400 font-bold uppercase tracking-wider">
+                                      No variants configuration active. Add a variant box configuration to enable shopping.
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                      {/* Drawer Footer Actions */}
+                      <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50">
+                        <button
+                          type="button"
+                          onClick={() => setIsVariantDrawerOpen(false)}
+                          className="bg-slate-800 hover:bg-slate-700 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md cursor-pointer transition-all"
+                        >
+                          Complete Management
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

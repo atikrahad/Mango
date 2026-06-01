@@ -1,0 +1,756 @@
+{
+  "info": {
+    "_postman_id": "c7a8d56b-67a3-4874-9844-93ad982b6e14",
+    "name": "Mangosteen API Testing Suite",
+    "description": "Comprehensive Postman collection for Mangosteen Monorepo API testing. Features full support for User Session Actions, E-Commerce Catalog, Affiliate Partner wallet tracking, Admin Orders ledger, and Rider OTP COD delivery logistics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "your_jwt_access_token_here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication Module",
+      "description": "User registration, login session tokens, refresh tokens, active session context, and logout endpoints.",
+      "item": [
+        {
+          "name": "User Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"affiliate2@mangosteen.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Affiliate Abul\",\n  \"role\": \"AFFILIATE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers a new user inside the system. Acceptable roles include: 'CUSTOMER', 'AFFILIATE', 'ADMIN', 'DELIVERY_AGENT', or 'SUPER_ADMIN'."
+          }
+        },
+        {
+          "name": "User Session Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                  "    console.log(\"Saved accessToken variable automatically!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@mangosteen.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticates user credentials and returns a Bearer JWT access token, setting a secure httpOnly cookie with the refresh token."
+          }
+        },
+        {
+          "name": "Token Refresh Rotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Rotates session identifiers by exchanging the httpOnly refresh cookie for a brand new brief JWT access token."
+          }
+        },
+        {
+          "name": "Active Session Context (me)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Retrieves the active user profile information decoded directly from the Bearer JWT token."
+          }
+        },
+        {
+          "name": "Sign Out & Terminate Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Clears all active session authorization cookies from the client browser."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. E-Commerce Catalog Module",
+      "description": "Endpoints to explore categories, query items, fetch product details, and manage inventory products/variants.",
+      "item": [
+        {
+          "name": "Fetch Product Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "categories"
+              ]
+            },
+            "description": "Gets all active category listings (e.g. Organic Farm Mangoes) with details."
+          }
+        },
+        {
+          "name": "Query Products List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products?limit=10&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Queries all mango boxes, supporting sorting, limits, and category filter slugs."
+          }
+        },
+        {
+          "name": "Fetch Product by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/himsagar-premium",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "products",
+                "himsagar-premium"
+              ]
+            },
+            "description": "Gets full specifications, variants, and available inventory stock details of a single product slug."
+          }
+        },
+        {
+          "name": "Create Product (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"replace-with-actual-category-id\",\n  \"name\": \"Amrapali Premium Harvest\",\n  \"slug\": \"amrapali-premium-harvest\",\n  \"description\": \"Sweet, aromatic, highly flavorful premium Amrapali mangoes from Rajshahi orchards.\",\n  \"sweetness\": 5,\n  \"isOrganic\": true,\n  \"originDistrict\": \"Rajshahi\",\n  \"imageUrl\": \"[\\\"https://images.unsplash.com/photo-1553279768-865429fa0078\\\"]\",\n  \"seoTitle\": \"Buy Amrapali Premium Harvest Online\",\n  \"seoDesc\": \"Experience organic Amrapali mangoes sent straight to your home from local orchards.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "products"
+              ]
+            },
+            "description": "Creates a new catalog product profile. Requires Admin/SuperAdmin JWT session authorization."
+          }
+        },
+        {
+          "name": "Create Product Variant (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"replace-with-actual-product-id\",\n  \"sku\": \"MNG-AMP-05K-ORG\",\n  \"weightKg\": 5.0,\n  \"boxCount\": 1,\n  \"price\": 1200.0,\n  \"discount\": 0.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/variants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "variants"
+              ]
+            },
+            "description": "Binds a priced SKU weight variant with associated box count units to a parent product ID. Requires Admin access."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Affiliate Partner Module",
+      "description": "Referral click metrics track, personal balance view, payout submissions, and admin payouts queue verification.",
+      "item": [
+        {
+          "name": "Track Referral Link Click",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"referralCode\": \"aff_DEMO01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/affiliates/clicks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "affiliates",
+                "clicks"
+              ]
+            },
+            "description": "Registers an entry click audit trace for cookies attribution when a potential shopper accesses a partner campaign link."
+          }
+        },
+        {
+          "name": "Fetch Wallet & Performance Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/affiliates/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "affiliates",
+                "me"
+              ]
+            },
+            "description": "Gets commissions, click logs, pending balances, and total paid payouts for the authenticated Affiliate Partner."
+          }
+        },
+        {
+          "name": "Request Balance Payout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 800,\n  \"method\": \"BKASH\",\n  \"paymentDetails\": \"Personal Account Number: +8801700000003\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/affiliates/withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "affiliates",
+                "withdrawals"
+              ]
+            },
+            "description": "Submits a request to cash out cleared wallet commissions. Minimum amount is 500 BDT. Requires Affiliate role."
+          }
+        },
+        {
+          "name": "Fetch Withdrawals Queue (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/affiliates/admin/withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "affiliates",
+                "admin",
+                "withdrawals"
+              ]
+            },
+            "description": "Retrieves all affiliate payout requests for operations oversight. Requires Admin session."
+          }
+        },
+        {
+          "name": "Verify & Settle Payout Request (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"notes\": \"BKASH disburse payload executed and completed by ops manager.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/affiliates/admin/withdrawals/replace-with-withdrawal-request-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "affiliates",
+                "admin",
+                "withdrawals",
+                "replace-with-withdrawal-request-id"
+              ]
+            },
+            "description": "Approves or Declines an active affiliate's payout request. Action locks or clears the wallet reserves. Requires Admin role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. E-Commerce Orders Module",
+      "description": "Endpoints to place purchases, view shopper histories, track payments, list admin ledger, and update statuses.",
+      "item": [
+        {
+          "name": "Place E-Commerce Purchase Checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantId\": \"replace-with-actual-variant-id\",\n  \"quantity\": 2,\n  \"deliveryAddress\": \"House 45, Road 8, Dhanmondi R/A\",\n  \"district\": \"Dhaka\",\n  \"paymentMethod\": \"COD\",\n  \"referralCode\": \"aff_DEMO01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            },
+            "description": "Submits a new box purchase checkout order. Supports COD or gateway channels. Attributes referralCode to cookies if provided. Requires Customer session."
+          }
+        },
+        {
+          "name": "Fetch Shopper Order History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Lists all past checkouts, payment status, and delivery milestones for the authenticated Customer."
+          }
+        },
+        {
+          "name": "Retrieve Operations Ledger (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "admin"
+              ]
+            },
+            "description": "Lists seasonal checkout logs for operational oversight and dispatch tracking. Requires Admin access."
+          }
+        },
+        {
+          "name": "Update Order & Dispatch Status (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SHIPPED\",\n  \"deliveryAgentId\": \"replace-with-active-rider-user-id\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/admin/replace-with-active-order-id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "admin",
+                "replace-with-active-order-id",
+                "status"
+              ]
+            },
+            "description": "Updates order state ('PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', or 'CANCELLED') and assigns a Rider. Requires Admin role."
+          }
+        },
+        {
+          "name": "Fetch Delivery Riders List (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/riders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "riders"
+              ]
+            },
+            "description": "Lists all delivery agents registered in the system for dispatch allocation. Requires Admin access."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Rider COD Logistics Module",
+      "description": "Operational endpoints for delivery agents, including runs checklists, COD location arrival flags, and customer OTP checks.",
+      "item": [
+        {
+          "name": "Fetch Assigned Delivery Runs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/logistics/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logistics",
+                "runs"
+              ]
+            },
+            "description": "Retrieves the active deliveries list allocated to the authenticated Delivery Agent."
+          }
+        },
+        {
+          "name": "Trigger COD Location Arrival OTP",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logistics/orders/replace-with-active-order-id/arrive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logistics",
+                "orders",
+                "replace-with-active-order-id",
+                "arrive"
+              ]
+            },
+            "description": "Alerts the system that the rider has reached the customer's delivery destination. Generates and dispatches a 6-digit confirmation OTP code to the customer. Requires Delivery Agent role."
+          }
+        },
+        {
+          "name": "Verify COD OTP & Settle COD Delivery",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/logistics/orders/replace-with-active-order-id/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logistics",
+                "orders",
+                "replace-with-active-order-id",
+                "verify-otp"
+              ]
+            },
+            "description": "Validates the customer's OTP to confirm cash handover. Approves and closes the COD order ledger. Requires Delivery Agent role."
+          }
+        }
+      ]
+    }
+  ]
+}
