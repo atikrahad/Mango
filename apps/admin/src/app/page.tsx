@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
-  RefreshCw, CheckCircle2, XCircle, ChevronRight, Star, Info, Lock,
+  RefreshCw, CheckCircle2, XCircle, ChevronRight, ChevronLeft, Star, Info, Lock,
   TrendingUp, Award, Wallet, ArrowUpRight, Copy, Clock, Share2, Compass, 
   AlertCircle, Eye, LogOut, ArrowRight, UserPlus, ShieldAlert, BarChart3,
   Menu, X, Landmark, Activity, Layers, Shield,
@@ -106,6 +106,36 @@ export default function AdminPortalPage() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  // Sidebar Width & Collapsible states
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Mouse drag handlers for sidebar resizing
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      let newWidth = e.clientX;
+      if (newWidth < 180) newWidth = 180;
+      if (newWidth > 380) newWidth = 380;
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Sync / Fetch functions
   const fetchAdminData = async () => {
@@ -775,7 +805,7 @@ export default function AdminPortalPage() {
   // 2. Admin & Super Admin dashboard Layout (Light Professional)
   if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
     return (
-      <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col md:flex-row relative">
+      <div className="min-h-screen md:h-screen md:overflow-hidden bg-[#f8fafc] text-slate-700 flex flex-col md:flex-row relative">
         
         {/* MOBILE HEADER */}
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -794,51 +824,72 @@ export default function AdminPortalPage() {
         </div>
 
         {/* ADMIN SIDEBAR */}
-        <aside className={`
-          fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200/80 p-5 flex flex-col justify-between transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:h-screen sticky top-0
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-          <div className="flex flex-col gap-6">
+        <aside 
+          className={`
+            fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-200/80 p-4 flex flex-col justify-between transition-[transform] duration-300 ease-in-out md:translate-x-0 md:static md:h-screen sticky top-0
+            ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            ${isResizing ? 'select-none' : ''}
+          `}
+          style={{ width: isSidebarCollapsed ? '76px' : `${sidebarWidth}px`, transition: isResizing ? 'none' : 'width 0.2s ease-in-out, transform 0.3s ease-in-out' }}
+        >
+          <div className="flex flex-col gap-6 relative">
             {/* Branding */}
-            <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-emerald-500 to-amber-500 flex items-center justify-center font-bold text-white text-lg shadow-sm">
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2.5'} pb-4 border-b border-slate-100 relative`}>
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-emerald-500 to-amber-500 flex items-center justify-center font-bold text-white text-lg shadow-sm shrink-0">
                 🥭
               </div>
-              <div className="flex flex-col">
-                <span className="font-black text-sm tracking-tight text-slate-800 leading-none">Mangosteen</span>
-                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Ops Console</span>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="flex flex-col animate-fadeIn">
+                  <span className="font-black text-sm tracking-tight text-slate-800 leading-none">Mangosteen</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Ops Console</span>
+                </div>
+              )}
+              
+              {/* Collapse Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="absolute -right-7 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-200 hover:border-slate-350 shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer hidden md:flex z-50 transition"
+              >
+                {isSidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+              </button>
             </div>
 
             {/* Profile Panel */}
-            <div className="ops-panel p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-250/30 flex items-center justify-center font-black text-sm text-emerald-600">
+            <div className={`ops-panel p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 flex ${isSidebarCollapsed ? 'justify-center' : 'items-center gap-3'}`}>
+              <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-250/30 flex items-center justify-center font-black text-xs text-emerald-600 shrink-0 shadow-sm">
                 {user.fullName.substring(0, 2).toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-slate-800 truncate leading-none">{user.fullName}</p>
-                <span className="inline-block bg-red-50 text-red-650 border border-red-200/50 font-mono text-[8px] font-black uppercase px-1 py-0.5 rounded mt-1.5 leading-none">
-                  {user.role}
-                </span>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="flex-1 min-w-0 animate-fadeIn">
+                  <p className="text-xs font-black text-slate-800 truncate leading-none">{user.fullName}</p>
+                  <span className="inline-block bg-red-50 text-red-650 border border-red-200/50 font-mono text-[8px] font-black uppercase px-1 py-0.5 rounded mt-1.5 leading-none">
+                    {user.role}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Navigation links */}
             <nav className="flex flex-col gap-1">
               <button
                 onClick={() => { setActiveSubTab('overview'); setIsMobileMenuOpen(false); }}
-                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'overview' ? 'ops-nav-item-active' : ''}`}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'overview' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "Overview Dashboard" : undefined}
               >
-                <Activity className="w-4 h-4" /> Overview Dashboard
+                <Activity className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">Overview Dashboard</span>}
               </button>
               
               <button
                 onClick={() => { setActiveSubTab('orders'); setIsMobileMenuOpen(false); }}
-                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'orders' ? 'ops-nav-item-active' : ''}`}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'orders' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "Orders Checkout Ledger" : undefined}
               >
-                <ShoppingBag className="w-4 h-4" /> Orders Checkout Ledger
-                {orders.length > 0 && (
-                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md">
+                <ShoppingBag className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">Orders Ledger</span>}
+                {orders.length > 0 && !isSidebarCollapsed && (
+                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md animate-fadeIn">
                     {orders.length}
                   </span>
                 )}
@@ -846,11 +897,13 @@ export default function AdminPortalPage() {
 
               <button
                 onClick={() => { setActiveSubTab('products'); setIsMobileMenuOpen(false); }}
-                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'products' ? 'ops-nav-item-active' : ''}`}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'products' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "Products Catalog" : undefined}
               >
-                <Layers className="w-4 h-4" /> Products Catalog
-                {products.length > 0 && (
-                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md">
+                <Layers className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">Products Catalog</span>}
+                {products.length > 0 && !isSidebarCollapsed && (
+                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md animate-fadeIn">
                     {products.length}
                   </span>
                 )}
@@ -858,11 +911,13 @@ export default function AdminPortalPage() {
 
               <button
                 onClick={() => { setActiveSubTab('payouts'); setIsMobileMenuOpen(false); }}
-                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'payouts' ? 'ops-nav-item-active' : ''}`}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'payouts' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "Affiliate Payouts Queue" : undefined}
               >
-                <Users className="w-4 h-4" /> Affiliate Payouts Queue
-                {withdrawals.filter(w => w.status === 'PENDING').length > 0 && (
-                  <span className="ml-auto bg-amber-50 text-amber-700 border border-amber-200/50 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md">
+                <Users className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">Payouts Queue</span>}
+                {withdrawals.filter(w => w.status === 'PENDING').length > 0 && !isSidebarCollapsed && (
+                  <span className="ml-auto bg-amber-50 text-amber-700 border border-amber-250/50 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md animate-fadeIn">
                     {withdrawals.filter(w => w.status === 'PENDING').length}
                   </span>
                 )}
@@ -870,30 +925,46 @@ export default function AdminPortalPage() {
 
               <button
                 onClick={() => { setActiveSubTab('security'); setIsMobileMenuOpen(false); }}
-                className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'security' ? 'ops-nav-item-active' : ''}`}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'security' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "Anti-Fraud Console" : undefined}
               >
-                <ShieldAlert className="w-4 h-4" /> Anti-Fraud Console
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">Anti-Fraud Console</span>}
               </button>
             </nav>
           </div>
 
           {/* Sidebar Footer Info */}
           <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Secure Link Active
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2'} text-[9px] font-black text-slate-400 uppercase tracking-widest`}>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Secure Active</span>}
             </div>
             <button
               onClick={logout}
-              className="w-full bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-650 hover:border-red-200 text-slate-500 text-xs font-black py-2 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+              className={`w-full bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-650 hover:border-red-200 text-slate-500 text-xs font-black py-2 rounded-xl transition flex items-center justify-center ${isSidebarCollapsed ? 'px-1' : 'gap-2'} cursor-pointer`}
+              title={isSidebarCollapsed ? "Disconnect Console" : undefined}
             >
-              <LogOut className="w-3.5 h-3.5" /> Disconnect console
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Disconnect</span>}
             </button>
           </div>
+
+          {/* Resize Handle */}
+          {!isSidebarCollapsed && (
+            <div
+              onMouseDown={() => setIsResizing(true)}
+              className={`
+                absolute top-0 right-0 w-1 h-full cursor-col-resize select-none z-50
+                hover:bg-emerald-500/30 active:bg-emerald-500 transition-colors duration-150
+                ${isResizing ? 'bg-emerald-500' : ''}
+              `}
+            />
+          )}
         </aside>
 
         {/* MAIN ADMIN WORKSPACE */}
-        <div className="flex-grow flex flex-col min-h-screen overflow-x-hidden">
+        <div className="flex-grow flex flex-col md:h-screen md:overflow-hidden overflow-x-hidden">
           
           {/* Header */}
           <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between">
@@ -919,7 +990,7 @@ export default function AdminPortalPage() {
           </header>
 
           {/* Content Swapper */}
-          <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+          <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6 md:overflow-y-auto">
             
             {/* SUB-TAB: OVERVIEW */}
             {activeSubTab === 'overview' && (
@@ -2122,7 +2193,7 @@ export default function AdminPortalPage() {
 
   // 3. Affiliate Dashboard Layout (Light Professional)
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col md:flex-row relative">
+    <div className="min-h-screen md:h-screen md:overflow-hidden bg-[#f8fafc] text-slate-700 flex flex-col md:flex-row relative">
       
       {/* MOBILE HEADER */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -2141,35 +2212,52 @@ export default function AdminPortalPage() {
       </div>
 
       {/* AFFILIATE SIDEBAR */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200/80 p-5 flex flex-col justify-between transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:h-screen sticky top-0
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex flex-col gap-6">
+      <aside 
+        className={`
+          fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-200/80 p-4 flex flex-col justify-between transition-[transform] duration-300 ease-in-out md:translate-x-0 md:static md:h-screen sticky top-0
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          ${isResizing ? 'select-none' : ''}
+        `}
+        style={{ width: isSidebarCollapsed ? '76px' : `${sidebarWidth}px`, transition: isResizing ? 'none' : 'width 0.2s ease-in-out, transform 0.3s ease-in-out' }}
+      >
+        <div className="flex flex-col gap-6 relative">
           {/* Branding */}
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-emerald-500 to-amber-500 flex items-center justify-center font-bold text-white text-lg shadow-sm">
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2.5'} pb-4 border-b border-slate-100 relative`}>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-emerald-500 to-amber-500 flex items-center justify-center font-bold text-white text-lg shadow-sm shrink-0">
               🥭
             </div>
-            <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tight text-slate-800 leading-none">Mangosteen</span>
-              <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Affiliate Hub</span>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex flex-col animate-fadeIn">
+                <span className="font-black text-sm tracking-tight text-slate-800 leading-none">Mangosteen</span>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mt-1">Affiliate Hub</span>
+              </div>
+            )}
+            
+            {/* Collapse Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="absolute -right-7 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-200 hover:border-slate-350 shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer hidden md:flex z-50 transition"
+            >
+              {isSidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
           {/* Profile Panel with Referral code */}
-          <div className="ops-panel p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-250/30 flex items-center justify-center font-black text-sm text-amber-600">
+          <div className={`ops-panel p-2 flex flex-col ${isSidebarCollapsed ? 'items-center justify-center' : 'gap-2'} rounded-xl border border-slate-200 bg-slate-50/50`}>
+            <div className={`flex ${isSidebarCollapsed ? 'justify-center' : 'items-center gap-2.5'}`}>
+              <div className="w-9 h-9 rounded-full bg-amber-50 border border-amber-250/30 flex items-center justify-center font-black text-xs text-amber-600 shrink-0 shadow-sm">
                 {user.fullName.substring(0, 2).toUpperCase()}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-black text-slate-800 truncate leading-none">{user.fullName}</p>
-                <p className="text-[9px] text-slate-400 font-semibold truncate mt-1 leading-none">Affiliate Partner</p>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="min-w-0 flex-1 animate-fadeIn">
+                  <p className="text-xs font-black text-slate-800 truncate leading-none">{user.fullName}</p>
+                  <p className="text-[9px] text-slate-400 font-semibold truncate mt-1 leading-none">Affiliate Partner</p>
+                </div>
+              )}
             </div>
-            {profile?.referralCode && (
-              <div className="bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 flex items-center justify-between mt-1 text-[10px] font-mono text-slate-500">
+            {profile?.referralCode && !isSidebarCollapsed && (
+              <div className="bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 flex items-center justify-between mt-1 text-[10px] font-mono text-slate-500 animate-fadeIn">
                 <span>Code: <b className="text-amber-600">{profile.referralCode}</b></span>
                 <button 
                   onClick={() => copyToClipboard(profile.referralCode)}
@@ -2179,57 +2267,88 @@ export default function AdminPortalPage() {
                 </button>
               </div>
             )}
+            {profile?.referralCode && isSidebarCollapsed && (
+              <button
+                onClick={() => copyToClipboard(profile.referralCode)}
+                className="p-1 text-slate-400 hover:text-amber-600 border border-slate-200 hover:border-amber-200 bg-slate-100/50 rounded-lg cursor-pointer mt-1"
+                title={`Copy Referral Code: ${profile.referralCode}`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Navigation Links */}
           <nav className="flex flex-col gap-1">
             <button
               onClick={() => { setActiveSubTab('overview'); setIsMobileMenuOpen(false); }}
-              className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'overview' ? 'ops-nav-item-active-affiliate' : ''}`}
+              className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'overview' ? 'ops-nav-item-active-affiliate' : ''}`}
+              title={isSidebarCollapsed ? "Partner Overview" : undefined}
             >
-              <Activity className="w-4 h-4" /> Partner Overview
+              <Activity className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Partner Overview</span>}
             </button>
             
             <button
               onClick={() => { setActiveSubTab('links'); setIsMobileMenuOpen(false); }}
-              className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'links' ? 'ops-nav-item-active-affiliate' : ''}`}
+              className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'links' ? 'ops-nav-item-active-affiliate' : ''}`}
+              title={isSidebarCollapsed ? "Share & Deep-Links" : undefined}
             >
-              <Share2 className="w-4 h-4" /> Share & Deep-Links
+              <Share2 className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Deep-Links</span>}
             </button>
 
             <button
               onClick={() => { setActiveSubTab('withdraw'); setIsMobileMenuOpen(false); }}
-              className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'withdraw' ? 'ops-nav-item-active-affiliate' : ''}`}
+              className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'withdraw' ? 'ops-nav-item-active-affiliate' : ''}`}
+              title={isSidebarCollapsed ? "Request Payout" : undefined}
             >
-              <Wallet className="w-4 h-4" /> Request Payout
+              <Wallet className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Request Payout</span>}
             </button>
 
             <button
               onClick={() => { setActiveSubTab('ledger'); setIsMobileMenuOpen(false); }}
-              className={`ops-nav-item flex items-center gap-2.5 px-3 py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'ledger' ? 'ops-nav-item-active-affiliate' : ''}`}
+              className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'ledger' ? 'ops-nav-item-active-affiliate' : ''}`}
+              title={isSidebarCollapsed ? "Settlements Ledger" : undefined}
             >
-              <Landmark className="w-4 h-4" /> Settlements Ledger
+              <Landmark className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-fadeIn">Settlements Ledger</span>}
             </button>
           </nav>
         </div>
 
         {/* Sidebar Footer */}
         <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            Wallet Verified
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2'} text-[9px] font-black text-slate-400 uppercase tracking-widest`}>
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            {!isSidebarCollapsed && <span className="animate-fadeIn">Wallet Verified</span>}
           </div>
           <button
             onClick={logout}
-            className="w-full bg-slate-50 border border-slate-200 hover:bg-red-550 hover:text-red-650 hover:border-red-200 text-slate-500 text-xs font-black py-2 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+            className={`w-full bg-slate-50 border border-slate-200 hover:bg-red-550 hover:text-red-650 hover:border-red-200 text-slate-500 text-xs font-black py-2 rounded-xl transition flex items-center justify-center ${isSidebarCollapsed ? 'px-1' : 'gap-2'} cursor-pointer`}
+            title={isSidebarCollapsed ? "Disconnect" : undefined}
           >
-            <LogOut className="w-3.5 h-3.5" /> Disconnect
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            {!isSidebarCollapsed && <span className="animate-fadeIn">Disconnect</span>}
           </button>
         </div>
+
+        {/* Resize Handle */}
+        {!isSidebarCollapsed && (
+          <div
+            onMouseDown={() => setIsResizing(true)}
+            className={`
+              absolute top-0 right-0 w-1 h-full cursor-col-resize select-none z-50
+              hover:bg-amber-500/30 active:bg-amber-500 transition-colors duration-150
+              ${isResizing ? 'bg-amber-500' : ''}
+            `}
+          />
+        )}
       </aside>
 
       {/* MAIN AFFILIATE WORKSPACE */}
-      <div className="flex-grow flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-grow flex flex-col md:h-screen md:overflow-hidden overflow-x-hidden">
         
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between">
@@ -2261,7 +2380,7 @@ export default function AdminPortalPage() {
             <span className="text-xs font-extrabold uppercase tracking-widest">Syncing Performance Wallet...</span>
           </div>
         ) : (
-          <main className="flex-grow p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+          <main className="flex-grow p-6 max-w-7xl w-full mx-auto flex flex-col gap-6 md:overflow-y-auto">
             
             {/* SUB-TAB: PARTNER OVERVIEW */}
             {activeSubTab === 'overview' && (
