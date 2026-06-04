@@ -8,7 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { AffiliateModule } from './modules/affiliate/affiliate.module';
 import { OrderModule } from './modules/order/order.module';
-import { LogisticsModule } from './modules/logistics/logistics.module';
+import { CouponModule } from './modules/coupon/coupon.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { LogisticsModule } from './modules/logistics/logistics.module';
     CatalogModule,
     AffiliateModule,
     OrderModule,
-    LogisticsModule,
+    CouponModule,
   ],
   controllers: [AppController],
   providers: [

@@ -15,13 +15,13 @@ export class AuthService {
   async register(body: any) {
     const { email, password, fullName, phone, role } = body;
 
-    // Strict validation: Only CUSTOMER or AFFILIATE in registration
-    if (role !== UserRole.CUSTOMER && role !== UserRole.AFFILIATE) {
+    // Strict validation: Only AFFILIATE in self-registration
+    if (role !== UserRole.AFFILIATE) {
       throw new BadRequestException({
         success: false,
         error: {
           code: 'AUTH_FORBIDDEN',
-          message: 'Can only register as CUSTOMER or AFFILIATE.',
+          message: 'Can only register as AFFILIATE.',
         },
       });
     }
@@ -53,31 +53,26 @@ export class AuthService {
           passwordHash,
           role,
           isActive: true,
-          isVerified: role === UserRole.CUSTOMER, // Customers auto-verified for demo simplicity
+          isVerified: false, // Affiliates require admin verification
         },
       });
 
-      // If user is an Affiliate, create affiliate profile with referral code
-      if (role === UserRole.AFFILIATE) {
-        const referralCode = `aff_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        await tx.affiliate.create({
-          data: {
-            userId: newUser.id,
-            referralCode,
-            walletBalance: 0,
-            isActive: true,
-          },
-        });
-      }
+      const referralCode = `aff_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      await tx.affiliate.create({
+        data: {
+          userId: newUser.id,
+          referralCode,
+          walletBalance: 0,
+          isActive: true,
+        },
+      });
 
       return newUser;
     });
 
     return {
       success: true,
-      message: role === UserRole.AFFILIATE
-        ? 'Affiliate registration successful. Wait for identity verification.'
-        : 'Customer registration successful.',
+      message: 'Affiliate registration successful. Wait for identity verification.',
       data: {
         id: user.id,
         email: user.email,

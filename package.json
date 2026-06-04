@@ -10,7 +10,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:generate": "npm run generate --workspace=@mangosteen/database",
     "db:migrate": "npm run migrate --workspace=@mangosteen/database",
-    "db:seed": "npm run seed --workspace=@mangosteen/database"
+    "db:seed": "npm run seed --workspace=@mangosteen/database",
+    "fallow": "npx -y fallow",
+    "fallow:dupes": "npx -y fallow dupes"
   },
   "workspaces": [
     "apps/*",

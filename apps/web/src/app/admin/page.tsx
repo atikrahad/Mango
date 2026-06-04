@@ -5,33 +5,31 @@ import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
-  RefreshCw, CheckCircle, XCircle, ChevronRight, Star, Info, Lock
+  RefreshCw, CheckCircle, XCircle, ChevronRight, Star, Info, Lock,
+  Eye, Trash2, X
 } from 'lucide-react';
+import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAdminActions } from '@mangosteen/shared';
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Dynamic delivery riders list
-  const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
+
 
   // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    useToastStore.getState().showToast(message, type);
   };
 
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [ordRes, witRes, riderRes] = await Promise.all([
+      const [ordRes, witRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
-        api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
       if (ordRes.data?.success) {
@@ -39,9 +37,6 @@ export default function AdminPage() {
       }
       if (witRes.data?.success) {
         setWithdrawals(witRes.data.data);
-      }
-      if (riderRes.data?.success) {
-        setDeliveryRiders(riderRes.data.data);
       }
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
@@ -57,59 +52,18 @@ export default function AdminPage() {
     }
   }, [isAuthenticated, user]);
 
-  const updateOrderStatus = async (orderId: string, status: string, deliveryAgentId?: string) => {
-    try {
-      const res = await api.patch(`/orders/admin/${orderId}/status`, {
-        status,
-        deliveryAgentId: deliveryAgentId || undefined,
-      });
-
-      if (res.data?.success) {
-        showToast(`Order status updated successfully to ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to update order.';
-      showToast(msg, 'error');
-    }
-  };
-
-  const processWithdrawal = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      const res = await api.patch(`/affiliates/admin/withdrawals/${requestId}`, {
-        status,
-        notes: `Processed and cleared by admin: ${user?.fullName}`,
-      });
-
-      if (res.data?.success) {
-        showToast(`Withdrawal payout request marked as ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to settle payout.';
-      showToast(msg, 'error');
-    }
-  };
+  const { updateOrderStatus, processWithdrawal, deleteOrder } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   if (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN')) {
     return (
-      <div className="flex-grow flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto min-h-[60vh] gap-6">
-        <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center text-3xl shadow-lg">
-          <Lock className="w-8 h-8 text-amber-500" />
-        </div>
-        <div>
-          <h2 className="font-extrabold text-2xl text-slate-100 mb-2">Access Denied: Admin Console</h2>
-          <p className="text-sm text-slate-400 leading-relaxed">
+      <PortalLockScreen
+        title="Access Denied: Admin Console"
+        description={
+          <>
             Please login as an <span className="font-bold text-amber-400">Admin or Super Admin</span> to manage stock variants, assign rider runs, and approve affiliate commissions.
-          </p>
-        </div>
-        <a 
-          href="/"
-          className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm transition"
-        >
-          Return to Catalog
-        </a>
-      </div>
+          </>
+        }
+      />
     );
   }
 
@@ -117,28 +71,13 @@ export default function AdminPage() {
     <div className="flex-grow flex flex-col min-h-screen">
       
       {/* Header */}
-      <header className="sticky top-0 z-40 glass-panel border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <a href="/" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg">
-            🥭
-          </a>
-          <div>
-            <h1 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-              Mangosteen Admin Console
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">
-              Operational Monolith
-            </p>
-          </div>
-        </div>
-
-        <button 
-          onClick={fetchAdminData}
-          className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
-        >
-          <RefreshCw className="w-4 h-4" /> Sync Data
-        </button>
-      </header>
+      <PortalHeader
+        title="Mangosteen Admin Console"
+        subtitle="Operational Monolith"
+        actionLabel="Sync Data"
+        actionIcon={<RefreshCw className="w-4 h-4" />}
+        onActionClick={fetchAdminData}
+      />
 
       <div className="px-6 py-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         
@@ -185,98 +124,188 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 🚀 Active Orders & Agent Assignments Queue */}
+        {/* 🚀 Active Orders & Details Drawer */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6">
           <div>
             <h3 className="font-extrabold text-lg text-slate-100 mb-1">Seasonal Orders Checkout Ledger</h3>
-            <p className="text-xs text-slate-400">Review consumer checkouts, assign delivery riders to district regions, and update en route status.</p>
+            <p className="text-xs text-slate-400">Review consumer checkouts, manage status, and delete orders if necessary.</p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-bold">
-                  <th className="pb-3">Order Reference</th>
-                  <th className="pb-3">Buyer details</th>
-                  <th className="pb-3">District</th>
-                  <th className="pb-3">Total Cost</th>
-                  <th className="pb-3">Gateway</th>
-                  <th className="pb-3">COD OTP status</th>
-                  <th className="pb-3">Assigned Rider</th>
-                  <th className="pb-3 text-right">Actions Workflow</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-850">
-                {orders.map((order) => (
-                  <tr key={order.id} className="text-slate-300">
-                    <td className="py-4 font-mono font-bold text-slate-400">{order.id.substring(0, 8).toUpperCase()}</td>
-                    <td className="py-4">
-                      <p className="font-semibold text-slate-200">{order.user?.fullName}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{order.user?.email}</p>
-                    </td>
-                    <td className="py-4">📍 {order.district}</td>
-                    <td className="py-4 font-bold text-amber-400">{order.totalAmount} BDT</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        order.payment?.gateway === 'COD' ? 'bg-amber-500/10 text-amber-400' : 'bg-sky-500/10 text-sky-400'
-                      }`}>
-                        {order.payment?.gateway}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      {order.payment?.gateway === 'COD' ? (
+          <div className="flex gap-6 items-start w-full relative">
+            <div className={`transition-all duration-300 ${selectedOrder ? 'w-2/3' : 'w-full'} overflow-x-auto`}>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-bold">
+                    <th className="pb-3">Order Reference</th>
+                    <th className="pb-3">Buyer details</th>
+                    <th className="pb-3">District</th>
+                    <th className="pb-3">Total Cost</th>
+                    <th className="pb-3">Gateway</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3 text-right">Actions Workflow</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-850">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="text-slate-300">
+                      <td className="py-4 font-mono font-bold text-slate-400">{order.id.substring(0, 8).toUpperCase()}</td>
+                      <td className="py-4">
+                        <p className="font-semibold text-slate-200">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
+                      </td>
+                      <td className="py-4">📍 {order.district}</td>
+                      <td className="py-4 font-bold text-amber-400">{order.totalAmount} BDT</td>
+                      <td className="py-4">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          order.codVerified ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                          order.payment?.gateway === 'COD' ? 'bg-amber-500/10 text-amber-400' : 'bg-sky-500/10 text-sky-400'
                         }`}>
-                          {order.codVerified ? 'Verified' : 'Pending OTP'}
+                          {order.payment?.gateway}
                         </span>
+                      </td>
+                      <td className="py-4">
+                        <select
+                          value={order.status}
+                          onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold border border-slate-800 bg-slate-900 cursor-pointer focus:outline-none transition ${
+                            order.status === 'DELIVERED' ? 'text-emerald-450 hover:bg-emerald-950/10' :
+                            order.status === 'SHIPPED' ? 'text-sky-400 hover:bg-sky-950/10' :
+                            order.status === 'CANCELLED' ? 'text-red-400 hover:bg-red-950/10' :
+                            order.status === 'CONFIRMED' ? 'text-indigo-400 hover:bg-indigo-950/10' :
+                            'text-amber-400 hover:bg-amber-950/10'
+                          }`}
+                        >
+                          <option value="PENDING" className="bg-slate-900 text-slate-300">Pending</option>
+                          <option value="CONFIRMED" className="bg-slate-900 text-slate-300">Confirmed</option>
+                          <option value="SHIPPED" className="bg-slate-900 text-slate-300">Shipped</option>
+                          <option value="DELIVERED" className="bg-slate-900 text-slate-300">Delivered</option>
+                          <option value="CANCELLED" className="bg-slate-900 text-slate-300">Cancelled</option>
+                        </select>
+                      </td>
+                      <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                        <button 
+                          onClick={() => setSelectedOrder(order)}
+                          title="View Details"
+                          className="bg-slate-900 border border-slate-800 hover:bg-amber-950/20 hover:border-amber-900 text-amber-400 p-1.5 rounded-lg transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => deleteOrder(order.id)}
+                          title="Delete Order"
+                          className="bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:border-red-900 text-red-400 p-1.5 rounded-lg transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {orders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-slate-500 font-semibold">
+                        No seasonal checkouts registered in system yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedOrder && (
+              <div className="w-1/3 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl sticky top-6 text-slate-300 animate-slideInRight">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-100">Order Details</h3>
+                    <p className="font-mono text-[10px] text-slate-500 mt-1">ID: {selectedOrder.id}</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedOrder(null)} 
+                    className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-550 hover:text-slate-200 transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4 text-xs">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Customer Info</p>
+                    <p className="font-extrabold text-slate-200 mt-1">{selectedOrder.customerName || selectedOrder.user?.fullName || 'Guest Checkout'}</p>
+                    <p className="text-slate-400 font-medium">{selectedOrder.customerEmail || selectedOrder.user?.email || 'No Email'}</p>
+                    <p className="text-slate-400 font-medium">{selectedOrder.customerPhone || selectedOrder.user?.phone || 'No Phone'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider">Delivery Details</p>
+                    <p className="text-slate-300 font-medium mt-1"><span className="font-bold text-slate-500">Address:</span> {selectedOrder.shippingAddress}</p>
+                    <p className="text-slate-300 font-medium"><span className="font-bold text-slate-500">District:</span> {selectedOrder.district}</p>
+                    <p className="text-slate-300 font-medium"><span className="font-bold text-slate-500">Slot:</span> {selectedOrder.deliverySlot}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider">Affiliate Attribution</p>
+                    <p className="text-slate-300 mt-1 font-semibold">
+                      Code: {selectedOrder.referralCode ? (
+                        <span className="font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{selectedOrder.referralCode}</span>
                       ) : (
-                        <span className="text-slate-500">—</span>
+                        <span className="text-slate-500 italic">None</span>
                       )}
-                    </td>
-                    <td className="py-4">
-                      <select
-                        value={order.deliveryAgentId || ''}
-                        onChange={(e) => updateOrderStatus(order.id, 'SHIPPED', e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-300 text-xs focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="">Choose Agent</option>
-                        {deliveryRiders.map((r) => (
-                          <option key={r.id} value={r.id}>{r.fullName || r.name} ({r.email})</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-4 text-right flex justify-end gap-1.5">
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-sky-950/20 hover:border-sky-900 text-sky-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        En Route
-                      </button>
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-emerald-950/20 hover:border-emerald-900 text-emerald-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        Deliver
-                      </button>
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:border-red-900 text-red-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        Drop
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {orders.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-slate-500 font-semibold">
-                      No seasonal checkouts registered in system yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                    </p>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4">
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider mb-2">Order Items</p>
+                    <div className="space-y-3">
+                      {selectedOrder.items?.map((item: any) => (
+                        <div key={item.id} className="flex justify-between items-start gap-4">
+                          <div>
+                            <p className="font-bold text-slate-200">{item.variant?.product?.name || 'Product Item'}</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {item.variant?.weightKg}kg Box × {item.quantity}
+                            </p>
+                          </div>
+                          <span className="font-extrabold text-slate-300">{Number(item.price) * item.quantity} BDT</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4 flex flex-col gap-2">
+                    <div className="flex justify-between font-medium text-slate-400">
+                      <span>Subtotal:</span>
+                      <span>{Number(selectedOrder.totalAmount) - Number(selectedOrder.shippingCost) + Number(selectedOrder.discountApplied)} BDT</span>
+                    </div>
+                    {Number(selectedOrder.discountApplied) > 0 && (
+                      <div className="flex justify-between text-red-400 font-medium">
+                        <span>Discount Applied:</span>
+                        <span>-{selectedOrder.discountApplied} BDT</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-medium text-slate-400">
+                      <span>Shipping Cost:</span>
+                      <span>{selectedOrder.shippingCost} BDT</span>
+                    </div>
+                    <div className="flex justify-between font-extrabold text-sm text-emerald-400 border-t border-slate-800 pt-2">
+                      <span>Total Paid:</span>
+                      <span>{selectedOrder.totalAmount} BDT</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4 flex flex-col gap-2">
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider mb-1">Affiliate Commission</p>
+                    {selectedOrder.commission ? (
+                      <div className="flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-semibold text-slate-300">Commission Amount:</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Status: <span className="uppercase text-emerald-500 font-bold">{selectedOrder.commission.status}</span></p>
+                        </div>
+                        <span className="font-extrabold text-emerald-400">+{selectedOrder.commission.amount} BDT</span>
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 italic text-[11px]">No affiliate commission attribution.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -356,20 +385,7 @@ export default function AdminPage() {
       </div>
 
       {/* 🚀 Active toast message */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2.5 border ${
-            toast.type === 'success' ? 'bg-slate-900 border-emerald-500/30 text-emerald-400' :
-            toast.type === 'error' ? 'bg-slate-900 border-red-500/30 text-red-400' :
-            'bg-slate-900 border-amber-500/30 text-amber-400'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
     </div>
   );
 }

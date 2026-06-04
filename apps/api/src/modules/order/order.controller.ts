@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -9,18 +9,9 @@ import { UserRole } from '@mangosteen/database';
 export class OrderController {
   constructor(private orderService: OrderService) {}
 
-  @Get('me')
-  @Roles(UserRole.CUSTOMER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getMyOrders(@Req() request: any) {
-    return this.orderService.getMyOrders(request.user.sub);
-  }
-
   @Post('checkout')
-  @Roles(UserRole.CUSTOMER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async checkout(@Req() request: any, @Body() body: any) {
-    return this.orderService.checkout(request.user.sub, body);
+  async checkout(@Body() body: any) {
+    return this.orderService.checkout(body);
   }
 
   // Admin Dashboard Actions
@@ -38,10 +29,10 @@ export class OrderController {
     return this.orderService.updateOrderStatus(id, body);
   }
 
-  @Get('riders')
+  @Delete('admin/:id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  async getDeliveryRiders() {
-    return this.orderService.getDeliveryRiders();
+  async deleteOrder(@Param('id') id: string) {
+    return this.orderService.deleteOrder(id);
   }
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
+import { Toast, useToastStore } from '@mangosteen/shared';
 import { 
   ShoppingBag, Trash2, Filter, Search, ShieldCheck, 
   MapPin, Star, Sparkles, RefreshCw, Compass, CheckCircle2, 
@@ -147,11 +148,8 @@ export default function CatalogPage() {
   });
 
   // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    useToastStore.getState().showToast(message, type);
   };
 
   // Fetch initial catalog data
@@ -262,44 +260,6 @@ export default function CatalogPage() {
 
     try {
       setCheckoutLoading(true);
-      let activeToken = accessToken;
-
-      // Auto guest account register & login in background if unauthenticated
-      if (!isAuthenticated || !activeToken) {
-        const guestEmail = `guest_${billingPhone}@mangosteen.com`;
-        const guestPassword = `GuestPass_${billingPhone}!`;
-
-        try {
-          // Attempt registration
-          await api.post('/auth/register', {
-            email: guestEmail,
-            password: guestPassword,
-            fullName: billingFullName,
-            phone: billingPhone,
-            role: 'CUSTOMER'
-          });
-        } catch (regError: any) {
-          // If already registered, ignore and continue to login
-          console.log('Ambassador or customer already registered, logging in directly...');
-        }
-
-        // Attempt direct login
-        const loginRes = await api.post('/auth/login', {
-          email: guestEmail,
-          password: guestPassword
-        });
-
-        if (loginRes.data?.success) {
-          const { token, user: loggedUser } = loginRes.data.data;
-          setSession(token, loggedUser);
-          activeToken = token;
-          // Apply token to default api header
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } else {
-          throw new Error('Background guest authorization failed.');
-        }
-      }
-
       // Dispatch checkout payload
       const payload = {
         items: items.map((item) => ({
@@ -312,6 +272,9 @@ export default function CatalogPage() {
         paymentGateway: billingPaymentGateway,
         couponCode: appliedCoupon ? couponCode : undefined,
         referralCode: referralCode || undefined,
+        customerName: billingFullName,
+        customerPhone: billingPhone,
+        customerEmail: `guest_${billingPhone}@mangosteen.com`,
       };
 
       const res = await api.post('/orders/checkout', payload);
@@ -1703,20 +1666,7 @@ export default function CatalogPage() {
       )}
 
       {/* 🚀 Active toast message */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border ${
-            toast.type === 'success' ? 'bg-white border-emerald-500 text-emerald-700' :
-            toast.type === 'error' ? 'bg-white border-red-500 text-red-700' :
-            'bg-white border-amber-500 text-amber-700'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
 
       {/* 🚀 Footer */}
       <footer className="border-t border-stone-200 bg-white py-12 px-6 text-center text-xs text-stone-500 mt-auto shadow-inner">

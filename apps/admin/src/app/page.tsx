@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { Toast, useToastStore, useAffiliate, useAdminActions } from '@mangosteen/shared';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
   RefreshCw, CheckCircle2, XCircle, ChevronRight, ChevronLeft, Star, Info, Lock,
@@ -30,9 +31,23 @@ export default function AdminPortalPage() {
   // Dashboards States
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
-  const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const {
+    profile,
+    loading: affiliateLoading,
+    withdrawAmount, setWithdrawAmount,
+    withdrawMethod, setWithdrawMethod,
+    withdrawDetails, setWithdrawDetails,
+    withdrawLoading,
+    generatedLink,
+    linkCopied,
+    fetchAffiliateProfile,
+    handleWithdrawSubmit,
+    copyToClipboard,
+  } = useAffiliate(api, typeof window !== 'undefined' ? window.location.origin : '');
+
+  const { updateOrderStatus, processWithdrawal, deleteOrder } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   // Sidebar Layout Navigation state
   const [activeSubTab, setActiveSubTab] = useState<string>('overview');
@@ -89,22 +104,11 @@ export default function AdminPortalPage() {
   });
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
 
-  // Withdrawal Payout form state (Affiliate)
-  const [withdrawAmount, setWithdrawAmount] = useState('500');
-  const [withdrawMethod, setWithdrawMethod] = useState('BKASH');
-  const [withdrawDetails, setWithdrawDetails] = useState('');
-  const [withdrawLoading, setWithdrawLoading] = useState(false);
 
-  // Referral campaign links builder state
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
 
   // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    useToastStore.getState().showToast(message, type);
   };
 
   // Sidebar Width & Collapsible states
@@ -138,13 +142,12 @@ export default function AdminPortalPage() {
   }, [isResizing]);
 
   // Sync / Fetch functions
-  const fetchAdminData = async () => {
+  async function fetchAdminData() {
     try {
       setLoading(true);
-      const [ordRes, witRes, riderRes, prodRes, catRes] = await Promise.all([
+      const [ordRes, witRes, prodRes, catRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
-        api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/catalog/products?includeInactive=true'),
         api.get('/catalog/categories'),
       ]);
@@ -155,9 +158,6 @@ export default function AdminPortalPage() {
       if (witRes.data?.success) {
         setWithdrawals(witRes.data.data);
       }
-      if (riderRes.data?.success) {
-        setDeliveryRiders(riderRes.data.data);
-      }
       if (prodRes.data?.success) {
         setProducts(prodRes.data.data.items);
       }
@@ -167,24 +167,6 @@ export default function AdminPortalPage() {
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
       showToast('Could not fetch administrative operations ledger queues.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAffiliateProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/affiliates/me');
-      if (res.data?.success) {
-        setProfile(res.data.data);
-        if (res.data.data?.referralCode) {
-          setGeneratedLink(`${window.location.origin}/?ref=${res.data.data.referralCode}`);
-        }
-      }
-    } catch (e: any) {
-      console.error('Error fetching affiliate profile:', e);
-      showToast('Could not fetch active affiliate performance wallet details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -233,87 +215,14 @@ export default function AdminPortalPage() {
     }
   };
 
-  // Action Handlers (Admin)
-  const updateOrderStatus = async (orderId: string, status: string, deliveryAgentId?: string) => {
-    try {
-      const res = await api.patch(`/orders/admin/${orderId}/status`, {
-        status,
-        deliveryAgentId: deliveryAgentId || undefined,
-      });
-
-      if (res.data?.success) {
-        showToast(`Order status updated successfully to ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to update order.';
-      showToast(msg, 'error');
-    }
-  };
-
-  const processWithdrawal = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      const res = await api.patch(`/affiliates/admin/withdrawals/${requestId}`, {
-        status,
-        notes: `Processed and cleared by operations manager: ${user?.fullName}`,
-      });
-
-      if (res.data?.success) {
-        showToast(`Withdrawal payout request marked as ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to settle payout request.';
-      showToast(msg, 'error');
-    }
-  };
-
-  // Action Handlers (Affiliate)
-  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+  const handleWithdrawFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = Number(withdrawAmount);
-    if (amt < 500) {
-      showToast('Minimum payout balance threshold is 500 BDT.', 'error');
-      return;
-    }
-    if (amt > Number(profile?.walletBalance || 0)) {
-      showToast('Specified withdrawal amount exceeds available wallet balance.', 'error');
-      return;
-    }
-    if (!withdrawDetails) {
-      showToast('Please specify cash account or bank details routing credentials.', 'error');
-      return;
-    }
-
-    try {
-      setWithdrawLoading(true);
-      const res = await api.post('/affiliates/withdrawals', {
-        amount: amt,
-        method: withdrawMethod,
-        paymentDetails: withdrawDetails,
-      });
-
-      if (res.data?.success) {
-        showToast(res.data.message || 'Withdrawal balance payout submitted for review!', 'success');
-        setWithdrawDetails('');
-        setWithdrawAmount('500');
-        fetchAffiliateProfile();
-        setActiveSubTab('ledger');
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Could not register payout request.';
-      showToast(msg, 'error');
-    } finally {
-      setWithdrawLoading(false);
-    }
+    await handleWithdrawSubmit(() => {
+      setActiveSubTab('ledger');
+    });
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setLinkCopied(true);
-    showToast('Campaign referral link copied to clipboard!', 'success');
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
+
 
   // Auto-generate slug from name on creation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -647,6 +556,8 @@ export default function AdminPortalPage() {
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customerEmail?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.user?.fullName?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.user?.email?.toLowerCase().includes(orderSearch.toLowerCase());
     
@@ -784,20 +695,7 @@ export default function AdminPortalPage() {
         </div>
 
         {/* Toast alert */}
-        {toast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-            <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-              toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-              toast.type === 'error' ? 'border-red-500 text-red-600' :
-              'border-amber-500 text-amber-600'
-            }`}>
-              <span className="text-base">
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-              </span>
-              <span>{toast.message}</span>
-            </div>
-          </div>
-        )}
+        <Toast />
       </div>
     );
   }
@@ -1131,10 +1029,6 @@ export default function AdminPortalPage() {
                           <span className="font-bold text-emerald-600 font-mono">14ms (Optimal)</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Riders Online:</span>
-                          <span className="font-bold text-sky-600 font-mono">{deliveryRiders.length} Agents</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
                           <span className="text-slate-400">Pending Comm:</span>
                           <span className="font-bold text-amber-600 font-mono">
                             {withdrawals.filter(w => w.status === 'PENDING').reduce((sum, w) => sum + Number(w.amount), 0)} BDT
@@ -1180,84 +1074,174 @@ export default function AdminPortalPage() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto min-h-[250px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                        <th className="pb-3 pr-2">Reference</th>
-                        <th className="pb-3 pr-2">Buyer details</th>
-                        <th className="pb-3 pr-2">District</th>
-                        <th className="pb-3 pr-2">Total Amount</th>
-                        <th className="pb-3 pr-2">Gateway</th>
-                        <th className="pb-3 pr-2">COD OTP Status</th>
-                        <th className="pb-3 pr-2">Assigned Rider</th>
-                        <th className="pb-3 text-right">Operational Workflow</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredOrders.map((order) => (
-                        <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                          <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
-                          <td className="py-4 pr-2">
-                            <p className="font-extrabold text-slate-800">{order.user?.fullName}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{order.user?.email}</p>
-                          </td>
-                          <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
-                          <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>
-                          <td className="py-4 pr-2">
-                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                              order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
-                            }`}>
-                              {order.payment?.gateway}
-                            </span>
-                          </td>
-                          <td className="py-4 pr-2">
-                            {order.payment?.gateway === 'COD' ? (
-                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                                order.codVerified ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-red-50 text-red-600 border border-red-200/50'
-                              }`}>
-                                {order.codVerified ? 'Verified' : 'Pending OTP'}
-                              </span>
-                            ) : (
-                              <span className="text-slate-300 font-semibold">—</span>
-                            )}
-                          </td>
-                          <td className="py-4 pr-2">
-                            <select
-                              value={order.deliveryAgentId || ''}
-                              onChange={(e) => updateOrderStatus(order.id, 'SHIPPED', e.target.value)}
-                              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 text-xs focus:outline-none focus:border-emerald-500 font-black cursor-pointer shadow-sm"
-                            >
-                              <option value="">Assign Rider</option>
-                              {deliveryRiders.map((r) => (
-                                <option key={r.id} value={r.id}>{r.fullName || r.name} ({r.email})</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-4 text-right flex justify-end gap-1.5">
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 text-sky-655 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              En Route
-                            </button>
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              Deliver
-                            </button>
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              Drop
-                            </button>
-                          </td>
+                <div className="flex gap-6 items-start w-full relative">
+                  <div className={`transition-all duration-300 ${selectedOrder ? 'w-2/3' : 'w-full'} overflow-x-auto min-h-[250px]`}>
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+                          <th className="pb-3 pr-2">Reference</th>
+                          <th className="pb-3 pr-2">Buyer details</th>
+                          <th className="pb-3 pr-2">District</th>
+                          <th className="pb-3 pr-2">Total Amount</th>
+                          <th className="pb-3 pr-2">Gateway</th>
+                          <th className="pb-3 pr-2">Status</th>
+                          <th className="pb-3 text-right">Operational Workflow</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredOrders.map((order) => (
+                          <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
+                            <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
+                            <td className="py-4 pr-2">
+                              <p className="font-extrabold text-slate-800">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
+                            </td>
+                            <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
+                            <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>
+                            <td className="py-4 pr-2">
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
+                              }`}>
+                                {order.payment?.gateway}
+                              </span>
+                            </td>
+                            <td className="py-4 pr-2">
+                              <select
+                                value={order.status}
+                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold uppercase border cursor-pointer transition focus:outline-none shadow-sm ${
+                                  order.status === 'DELIVERED' ? 'bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/50' :
+                                  order.status === 'SHIPPED' ? 'bg-sky-50 border-sky-200/60 text-sky-700 hover:bg-sky-100/50' :
+                                  order.status === 'CANCELLED' ? 'bg-red-50 border-red-200/60 text-red-700 hover:bg-red-100/50' :
+                                  order.status === 'CONFIRMED' ? 'bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100/50' :
+                                  'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100/50'
+                                }`}
+                              >
+                                <option value="PENDING" className="bg-white text-slate-800">Pending</option>
+                                <option value="CONFIRMED" className="bg-white text-slate-800">Confirmed</option>
+                                <option value="SHIPPED" className="bg-white text-slate-800">Shipped</option>
+                                <option value="DELIVERED" className="bg-white text-slate-800">Delivered</option>
+                                <option value="CANCELLED" className="bg-white text-slate-800">Cancelled</option>
+                              </select>
+                            </td>
+                            <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                              <button 
+                                onClick={() => setSelectedOrder(order)}
+                                title="View Details"
+                                className="bg-slate-50 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-amber-600 p-2 rounded-xl transition cursor-pointer shadow-sm"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => deleteOrder(order.id)}
+                                title="Delete Order"
+                                className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-655 p-2 rounded-xl transition cursor-pointer shadow-sm"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {selectedOrder && (
+                    <div className="w-1/3 bg-white border border-slate-200 rounded-3xl p-6 flex flex-col gap-6 shadow-xl sticky top-6 text-slate-800 animate-slideInRight">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <div>
+                          <h3 className="font-extrabold text-sm text-slate-800">Order Ledger Details</h3>
+                          <p className="font-mono text-[10px] text-slate-400 mt-1">ID: {selectedOrder.id}</p>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedOrder(null)} 
+                          className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-655 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-4 text-xs">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Customer Information</p>
+                          <p className="font-extrabold text-slate-850 mt-1">{selectedOrder.customerName || selectedOrder.user?.fullName || 'Guest Checkout'}</p>
+                          <p className="text-slate-500 font-medium">{selectedOrder.customerEmail || selectedOrder.user?.email || 'No Email'}</p>
+                          <p className="text-slate-500 font-medium">{selectedOrder.customerPhone || selectedOrder.user?.phone || 'No Phone'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Delivery Details</p>
+                          <p className="text-slate-655 font-medium mt-1"><span className="font-bold text-slate-700">Address:</span> {selectedOrder.shippingAddress}</p>
+                          <p className="text-slate-655 font-medium"><span className="font-bold text-slate-700">District:</span> {selectedOrder.district}</p>
+                          <p className="text-slate-655 font-medium"><span className="font-bold text-slate-700">Time Slot:</span> {selectedOrder.deliverySlot}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Affiliate Attribution</p>
+                          <p className="text-slate-655 mt-1 font-semibold">
+                            Referral Code: {selectedOrder.referralCode ? (
+                              <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">{selectedOrder.referralCode}</span>
+                            ) : (
+                              <span className="text-slate-400 italic">None</span>
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4">
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-2">Cart Ledger Items</p>
+                          <div className="space-y-3">
+                            {selectedOrder.items?.map((item: any) => (
+                              <div key={item.id} className="flex justify-between items-start gap-4">
+                                <div>
+                                  <p className="font-bold text-slate-800">{item.variant?.product?.name || 'Product Item'}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">
+                                    {item.variant?.weightKg}kg Box × {item.quantity}
+                                  </p>
+                                </div>
+                                <span className="font-extrabold text-slate-700">{Number(item.price) * item.quantity} BDT</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4 flex flex-col gap-2">
+                          <div className="flex justify-between font-medium text-slate-500">
+                            <span>Subtotal:</span>
+                            <span>{Number(selectedOrder.totalAmount) - Number(selectedOrder.shippingCost) + Number(selectedOrder.discountApplied)} BDT</span>
+                          </div>
+                          {Number(selectedOrder.discountApplied) > 0 && (
+                            <div className="flex justify-between text-red-500 font-medium">
+                              <span>Discount Applied:</span>
+                              <span>-{selectedOrder.discountApplied} BDT</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium text-slate-500">
+                            <span>Shipping Cost:</span>
+                            <span>{selectedOrder.shippingCost} BDT</span>
+                          </div>
+                          <div className="flex justify-between font-extrabold text-sm text-emerald-600 border-t border-slate-100 pt-2">
+                            <span>Total Settlement:</span>
+                            <span>{selectedOrder.totalAmount} BDT</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4 flex flex-col gap-2">
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1">Affiliate commission payout</p>
+                          {selectedOrder.commission ? (
+                            <div className="flex justify-between items-center text-xs">
+                              <div>
+                                <p className="font-semibold text-slate-700">Commission Amount:</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Status: <span className="uppercase text-emerald-600 font-bold">{selectedOrder.commission.status}</span></p>
+                              </div>
+                              <span className="font-extrabold text-emerald-600">+{selectedOrder.commission.amount} BDT</span>
+                            </div>
+                          ) : (
+                            <p className="text-slate-400 italic text-[11px]">No affiliate commission for this order.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2173,20 +2157,7 @@ export default function AdminPortalPage() {
         </div>
 
         {/* Global Toast notices */}
-        {toast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-            <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-              toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-              toast.type === 'error' ? 'border-red-500 text-red-600' :
-              'border-amber-500 text-amber-600'
-            }`}>
-              <span className="text-base">
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-              </span>
-              <span>{toast.message}</span>
-            </div>
-          </div>
-        )}
+        <Toast />
       </div>
     );
   }
@@ -2374,7 +2345,7 @@ export default function AdminPortalPage() {
         </header>
 
         {/* Sync spinner */}
-        {loading ? (
+        {affiliateLoading ? (
           <div className="flex-grow flex items-center justify-center p-20 gap-2.5 text-slate-400">
             <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
             <span className="text-xs font-extrabold uppercase tracking-widest">Syncing Performance Wallet...</span>
@@ -2544,7 +2515,7 @@ export default function AdminPortalPage() {
                   <p className="text-xs text-slate-400 font-semibold">Withdraw your cleared commission wallet balance directly into MFS mobile cash or bank accounts.</p>
                 </div>
 
-                <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleWithdrawFormSubmit} className="flex flex-col gap-4">
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
@@ -2691,20 +2662,7 @@ export default function AdminPortalPage() {
       </div>
 
       {/* Global Toast notices */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-            toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-            toast.type === 'error' ? 'border-red-500 text-red-600' :
-            'border-amber-500 text-amber-600'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
     </div>
   );
 }

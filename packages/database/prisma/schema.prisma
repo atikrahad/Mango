@@ -35,7 +35,6 @@ model User {
   reviews          Review[]
   auditLogs        AuditLog[]
   notifications    Notification[]
-  deliveryRuns     Order[] @relation("DeliveryAgentRuns")
 
   @@index([email])
   @@index([role])
@@ -70,6 +69,7 @@ model Product {
   originDistrict String
   imageUrl      String
   isActive      Boolean          @default(true)
+  commissionPercentage Decimal @default(5.0)
   seoTitle      String?
   seoDesc       String?
   
@@ -201,28 +201,32 @@ model WithdrawRequest {
 
 model Order {
   id              String         @id @default(uuid())
-  userId          String
+  userId          String?
   status          String         @default("PENDING")
   totalAmount     Decimal
   shippingCost    Decimal
   discountApplied Decimal        @default(0)
+  
+  // Guest customer details
+  customerName    String?
+  customerEmail   String?
+  customerPhone   String?
+  
+  // Referral tracking
+  referralCode    String?
   
   // Delivery & Logistics details
   shippingAddress String
   district        String
   deliveryZoneId  String?
   deliverySlot    String
-  deliveryAgentId String?
-  deliveryOtp     String?        // Code to complete COD/Secure delivery
-  codVerified     Boolean        @default(false)
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   // Relations
-  user            User           @relation(fields: [userId], references: [id])
+  user            User?          @relation(fields: [userId], references: [id])
   deliveryZone    DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id])
-  deliveryAgent   User?          @relation("DeliveryAgentRuns", fields: [deliveryAgentId], references: [id])
   items           OrderItem[]
   payment         Payment?
   commission      AffiliateCommission?
@@ -230,7 +234,6 @@ model Order {
 
   @@index([userId])
   @@index([status])
-  @@index([deliveryAgentId])
 }
 
 model OrderItem {
@@ -385,7 +388,7 @@ model Transaction {
   
   createdAt DateTime @default(now())
 
-  order     Order    @relation(fields: [orderId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }

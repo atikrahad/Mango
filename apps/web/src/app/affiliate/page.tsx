@@ -7,49 +7,23 @@ import {
   TrendingUp, Award, Wallet, ArrowUpRight, Copy, CheckCircle2, 
   Clock, Share2, Compass, AlertCircle, RefreshCw, ChevronRight, Lock
 } from 'lucide-react';
+import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAffiliate } from '@mangosteen/shared';
 
 export default function AffiliatePage() {
   const { user, isAuthenticated } = useAuthStore();
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Withdrawal form state
-  const [withdrawAmount, setWithdrawAmount] = useState('500');
-  const [withdrawMethod, setWithdrawMethod] = useState('BKASH');
-  const [withdrawDetails, setWithdrawDetails] = useState('');
-  const [withdrawLoading, setWithdrawLoading] = useState(false);
-
-  // Deep Link generator state
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
-
-  // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  const fetchAffiliateProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/affiliates/me');
-      if (res.data?.success) {
-        setProfile(res.data.data);
-        
-        // Setup initial referral link
-        if (res.data.data?.referralCode) {
-          setGeneratedLink(`${window.location.origin}/?ref=${res.data.data.referralCode}`);
-        }
-      }
-    } catch (e: any) {
-      console.error('Error fetching affiliate profile:', e);
-      showToast('Could not fetch active affiliate analytics details.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    profile,
+    loading,
+    withdrawAmount, setWithdrawAmount,
+    withdrawMethod, setWithdrawMethod,
+    withdrawDetails, setWithdrawDetails,
+    withdrawLoading,
+    generatedLink,
+    linkCopied,
+    fetchAffiliateProfile,
+    handleWithdrawSubmit,
+    copyToClipboard,
+  } = useAffiliate(api, typeof window !== 'undefined' ? window.location.origin : '');
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'AFFILIATE') {
@@ -57,74 +31,21 @@ export default function AffiliatePage() {
     }
   }, [isAuthenticated, user]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setLinkCopied(true);
-    showToast('Referral link copied to clipboard successfully!', 'success');
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
-
-  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+  const handleWithdrawFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const amt = Number(withdrawAmount);
-    if (amt < 500) {
-      showToast('Minimum withdrawal payout threshold is 500 BDT.', 'error');
-      return;
-    }
-
-    if (amt > Number(profile?.walletBalance)) {
-      showToast('Withdrawal amount exceeds your active wallet balance.', 'error');
-      return;
-    }
-
-    if (!withdrawDetails) {
-      showToast('Please specify withdrawal payment account details.', 'error');
-      return;
-    }
-
-    try {
-      setWithdrawLoading(true);
-      const res = await api.post('/affiliates/withdrawals', {
-        amount: amt,
-        method: withdrawMethod,
-        paymentDetails: withdrawDetails,
-      });
-
-      if (res.data?.success) {
-        showToast(res.data.message || 'Withdrawal request submitted successfully!', 'success');
-        setWithdrawDetails('');
-        setWithdrawAmount('500');
-        // Refresh profile
-        fetchAffiliateProfile();
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Could not register payout request.';
-      showToast(msg, 'error');
-    } finally {
-      setWithdrawLoading(false);
-    }
+    await handleWithdrawSubmit();
   };
 
   if (!isAuthenticated || user?.role !== 'AFFILIATE') {
     return (
-      <div className="flex-grow flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto min-h-[60vh] gap-6">
-        <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center text-3xl shadow-lg">
-          <Lock className="w-8 h-8 text-amber-500" />
-        </div>
-        <div>
-          <h2 className="font-extrabold text-2xl text-slate-100 mb-2">Affiliate Portal Locked</h2>
-          <p className="text-sm text-slate-400 leading-relaxed">
+      <PortalLockScreen
+        title="Affiliate Portal Locked"
+        description={
+          <>
             Please sign up or authenticate as an <span className="font-bold text-amber-400">Affiliate Seller</span> to access deep-links, click tracking, and commission balance accounts.
-          </p>
-        </div>
-        <a 
-          href="/"
-          className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm transition"
-        >
-          Return to Catalog
-        </a>
-      </div>
+          </>
+        }
+      />
     );
   }
 
@@ -132,28 +53,13 @@ export default function AffiliatePage() {
     <div className="flex-grow flex flex-col min-h-screen">
       
       {/* Header bar */}
-      <header className="sticky top-0 z-40 glass-panel border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <a href="/" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg">
-            🥭
-          </a>
-          <div>
-            <h1 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-              Mangosteen Affiliate Hub
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">
-              Performance Wallet
-            </p>
-          </div>
-        </div>
-
-        <a 
-          href="/"
-          className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
-        >
-          <Compass className="w-4 h-4" /> Store Catalog
-        </a>
-      </header>
+      <PortalHeader
+        title="Mangosteen Affiliate Hub"
+        subtitle="Performance Wallet"
+        actionLabel="Store Catalog"
+        actionIcon={<Compass className="w-4 h-4" />}
+        actionHref="/"
+      />
 
       <div className="px-6 py-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         
@@ -281,7 +187,7 @@ export default function AffiliatePage() {
                   <p className="text-xs text-slate-400">Withdraw approved wallet balance directly to your bKash, Nagad, or bank accounts.</p>
                 </div>
 
-                <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleWithdrawFormSubmit} className="flex flex-col gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs text-slate-400 font-semibold">Amount (BDT)</label>
@@ -424,20 +330,7 @@ export default function AffiliatePage() {
       </div>
 
       {/* 🚀 Active toast message */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2.5 border ${
-            toast.type === 'success' ? 'bg-slate-900 border-emerald-500/30 text-emerald-400' :
-            toast.type === 'error' ? 'bg-slate-900 border-red-500/30 text-red-400' :
-            'bg-slate-900 border-amber-500/30 text-amber-400'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
     </div>
   );
 }
