@@ -1,0 +1,145 @@
+erDiagram
+    User ||--o| Affiliate : "has profile"
+    User ||--o{ Notification : "receives"
+    User ||--o{ AuditLog : "triggers"
+
+    Category ||--o{ Product : "contains"
+    Product ||--|{ ProductVariant : "has variants"
+    ProductVariant ||--o| Inventory : "tracks stock"
+    ProductVariant ||--o{ OrderItem : "ordered in"
+
+    Affiliate ||--o{ ReferralClick : "logs clicks"
+    Affiliate ||--o{ AffiliateCommission : "earns"
+    Affiliate ||--o{ WithdrawRequest : "submits"
+
+    Order ||--|{ OrderItem : "contains items"
+    Order ||--o| Payment : "has payment"
+    Order ||--o| AffiliateCommission : "generates commission"
+    Order ||--o{ Transaction : "records ledger details"
+    Order }o--o| DeliveryZone : "belongs to zone"
+
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        string fullName
+        string phone UK
+        string role "ADMIN | AFFILIATE"
+        boolean isActive
+        boolean isVerified
+        string avatarUrl
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Affiliate {
+        string id PK
+        string userId FK
+        string referralCode UK
+        string paymentDetails
+        decimal walletBalance
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Product {
+        string id PK
+        string categoryId FK
+        string name
+        string slug UK
+        string description
+        int sweetness
+        boolean isOrganic
+        string originDistrict
+        string imageUrl
+        decimal commissionPercentage
+        boolean isActive
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ProductVariant {
+        string id PK
+        string productId FK
+        string sku UK
+        decimal weightKg
+        int boxCount
+        decimal price
+        decimal discount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Inventory {
+        string id PK
+        string variantId FK
+        int availableStock
+        int reservedStock
+        string batchNumber
+        datetime harvestDate
+        int shelfLifeDays
+    }
+
+    Order {
+        string id PK
+        string customerName
+        string customerEmail
+        string customerPhone
+        string status "PENDING | CONFIRMED | SHIPPED | DELIVERED | CANCELLED"
+        decimal totalAmount
+        decimal shippingCost
+        decimal discountApplied
+        string shippingAddress
+        string district
+        string deliveryZoneId FK
+        string deliverySlot
+        string deliveryAgentName
+        string deliveryOtp
+        string referralCode
+        boolean codVerified
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    OrderItem {
+        string id PK
+        string orderId FK
+        string variantId FK
+        int quantity
+        decimal price
+    }
+
+    Payment {
+        string id PK
+        string orderId FK
+        string status "PENDING | COMPLETED | FAILED"
+        string gateway "STRIPE | SSLCOMMERZ | COD"
+        string gatewayTxId UK
+        decimal amount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    AffiliateCommission {
+        string id PK
+        string affiliateId FK
+        string orderId FK
+        decimal amount
+        string status "PENDING | APPROVED | REJECTED"
+        string notes
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    WithdrawRequest {
+        string id PK
+        string affiliateId FK
+        decimal amount
+        string status "PENDING | APPROVED | REJECTED"
+        string method "BKASH | NAGAD | BANK"
+        string txRef UK
+        string notes
+        datetime createdAt
+        datetime updatedAt
+    }

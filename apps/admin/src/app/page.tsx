@@ -560,6 +560,8 @@ export default function AdminPortalPage() {
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customerEmail?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.user?.fullName?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.user?.email?.toLowerCase().includes(orderSearch.toLowerCase());
     
@@ -1099,8 +1101,8 @@ export default function AdminPortalPage() {
                         <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
                           <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
                           <td className="py-4 pr-2">
-                            <p className="font-extrabold text-slate-800">{order.user?.fullName}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{order.user?.email}</p>
+                            <p className="font-extrabold text-slate-800">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
                           </td>
                           <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
                           <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>

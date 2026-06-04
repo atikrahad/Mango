@@ -260,44 +260,6 @@ export default function CatalogPage() {
 
     try {
       setCheckoutLoading(true);
-      let activeToken = accessToken;
-
-      // Auto guest account register & login in background if unauthenticated
-      if (!isAuthenticated || !activeToken) {
-        const guestEmail = `guest_${billingPhone}@mangosteen.com`;
-        const guestPassword = `GuestPass_${billingPhone}!`;
-
-        try {
-          // Attempt registration
-          await api.post('/auth/register', {
-            email: guestEmail,
-            password: guestPassword,
-            fullName: billingFullName,
-            phone: billingPhone,
-            role: 'CUSTOMER'
-          });
-        } catch (regError: any) {
-          // If already registered, ignore and continue to login
-          console.log('Ambassador or customer already registered, logging in directly...');
-        }
-
-        // Attempt direct login
-        const loginRes = await api.post('/auth/login', {
-          email: guestEmail,
-          password: guestPassword
-        });
-
-        if (loginRes.data?.success) {
-          const { token, user: loggedUser } = loginRes.data.data;
-          setSession(token, loggedUser);
-          activeToken = token;
-          // Apply token to default api header
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } else {
-          throw new Error('Background guest authorization failed.');
-        }
-      }
-
       // Dispatch checkout payload
       const payload = {
         items: items.map((item) => ({
@@ -310,6 +272,9 @@ export default function CatalogPage() {
         paymentGateway: billingPaymentGateway,
         couponCode: appliedCoupon ? couponCode : undefined,
         referralCode: referralCode || undefined,
+        customerName: billingFullName,
+        customerPhone: billingPhone,
+        customerEmail: `guest_${billingPhone}@mangosteen.com`,
       };
 
       const res = await api.post('/orders/checkout', payload);

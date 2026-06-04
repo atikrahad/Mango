@@ -153,8 +153,8 @@ export default function AdminPage() {
                   <tr key={order.id} className="text-slate-300">
                     <td className="py-4 font-mono font-bold text-slate-400">{order.id.substring(0, 8).toUpperCase()}</td>
                     <td className="py-4">
-                      <p className="font-semibold text-slate-200">{order.user?.fullName}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{order.user?.email}</p>
+                      <p className="font-semibold text-slate-200">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
                     </td>
                     <td className="py-4">📍 {order.district}</td>
                     <td className="py-4 font-bold text-amber-400">{order.totalAmount} BDT</td>

@@ -10,21 +10,21 @@ export class LogisticsController {
   constructor(private logisticsService: LogisticsService) {}
 
   @Get('runs')
-  @Roles(UserRole.DELIVERY_AGENT)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async getAssignedRuns(@Req() request: any) {
     return this.logisticsService.getAssignedRuns(request.user.sub);
   }
 
   @Post('orders/:orderId/arrive')
-  @Roles(UserRole.DELIVERY_AGENT)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async triggerOtpArrival(@Param('orderId') orderId: string, @Req() request: any) {
     return this.logisticsService.triggerOtpArrival(orderId, request.user.sub);
   }
 
   @Post('orders/:orderId/verify-otp')
-  @Roles(UserRole.DELIVERY_AGENT)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async verifyOtp(@Param('orderId') orderId: string, @Req() request: any, @Body() body: any) {
     return this.logisticsService.verifyOtp(orderId, request.user.sub, body);

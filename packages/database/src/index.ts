@@ -1,10 +1,8 @@
 export * from '@prisma/client';
 
 export const UserRole = {
-  CUSTOMER: 'CUSTOMER',
   AFFILIATE: 'AFFILIATE',
   ADMIN: 'ADMIN',
-  DELIVERY_AGENT: 'DELIVERY_AGENT',
   SUPER_ADMIN: 'SUPER_ADMIN'
 } as const;
 export type UserRole = typeof UserRole[keyof typeof UserRole];

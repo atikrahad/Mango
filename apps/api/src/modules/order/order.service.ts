@@ -4,7 +4,7 @@ import { OrderStatus, PaymentStatus, CommissionStatus } from '@mangosteen/databa
 
 @Injectable()
 export class OrderService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async getMyOrders(userId: string) {
     const orders = await this.prisma.order.findMany({
@@ -30,8 +30,19 @@ export class OrderService {
     };
   }
 
-  async checkout(userId: string, body: any) {
-    const { items, shippingAddress, district, deliverySlot, paymentGateway, couponCode, referralCode } = body;
+  async checkout(body: any) {
+    const {
+      items,
+      shippingAddress,
+      district,
+      deliverySlot,
+      paymentGateway,
+      couponCode,
+      referralCode,
+      customerName,
+      customerPhone,
+      customerEmail,
+    } = body;
 
     if (!items || items.length === 0) {
       throw new BadRequestException({
@@ -43,9 +54,10 @@ export class OrderService {
       });
     }
 
-    // Run order processing inside PostgreSQL transaction with pessimistic write locks
+    // Run order processing inside SQLite transaction
     const orderResult = await this.prisma.$transaction(async (tx) => {
       let subtotal = 0;
+      let totalCommission = 0;
       const orderItemsToCreate: any[] = [];
 
       // 1. Process items and lock inventory
@@ -78,9 +90,10 @@ export class OrderService {
           });
         }
 
-        // Fetch variant price
+        // Fetch variant price and associated product (for commission rate)
         const variant = await tx.productVariant.findUnique({
           where: { id: variantId },
+          include: { product: true },
         });
 
         if (!variant) {
@@ -103,6 +116,11 @@ export class OrderService {
 
         const price = Number(variant.price) - Number(variant.discount);
         subtotal += price * requestedQuantity;
+
+        // Calculate item commission based on product's commissionPercentage setting
+        const commissionPct = Number(variant.product.commissionPercentage || 5.0);
+        const itemCommission = price * requestedQuantity * (commissionPct / 100);
+        totalCommission += itemCommission;
 
         orderItemsToCreate.push({
           variantId,
@@ -167,7 +185,6 @@ export class OrderService {
       // 4. Create Order
       const newOrder = await tx.order.create({
         data: {
-          userId,
           status: OrderStatus.PENDING,
           totalAmount,
           shippingCost,
@@ -176,6 +193,10 @@ export class OrderService {
           district,
           deliverySlot,
           deliveryZoneId: shippingZone?.id || null,
+          customerName,
+          customerPhone,
+          customerEmail,
+          referralCode,
         },
       });
 
@@ -204,21 +225,19 @@ export class OrderService {
       });
 
       // 6. Manage Affiliate Attribution
-      if (referralCode) {
+      if (referralCode && totalCommission > 0) {
         const affiliate = await tx.affiliate.findUnique({
           where: { referralCode, isActive: true },
         });
 
-        if (affiliate && affiliate.userId !== userId) {
-          // Commission calculated as 10% of subtotal (excluding shipping fee)
-          const commissionAmount = subtotal * 0.1;
+        if (affiliate) {
           await tx.affiliateCommission.create({
             data: {
               affiliateId: affiliate.id,
               orderId: newOrder.id,
-              amount: commissionAmount,
+              amount: totalCommission,
               status: CommissionStatus.PENDING,
-              notes: `Commission of 10% for purchase: ${newOrder.id}`,
+              notes: `Commission calculated from product rates for order: ${newOrder.id}`,
             },
           });
         }
@@ -317,7 +336,7 @@ export class OrderService {
 
   async getDeliveryRiders() {
     const riders = await this.prisma.user.findMany({
-      where: { role: 'DELIVERY_AGENT', isActive: true },
+      where: { role: 'ADMIN', isActive: true },
       select: {
         id: true,
         fullName: true,

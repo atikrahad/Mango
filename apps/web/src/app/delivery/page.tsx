@@ -42,7 +42,7 @@ export default function DeliveryPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'DELIVERY_AGENT') {
+    if (isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')) {
       fetchAssignedRuns();
     }
   }, [isAuthenticated, user]);
@@ -96,13 +96,13 @@ export default function DeliveryPage() {
     }
   };
 
-  if (!isAuthenticated || user?.role !== 'DELIVERY_AGENT') {
+  if (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN')) {
     return (
       <PortalLockScreen
         title="Delivery Portal Locked"
         description={
           <>
-            Please sign in as a <span className="font-bold text-amber-400">Delivery Agent</span> rider to manage en route runs tasks and verify cash collection OTP codes.
+            Please sign in as an <span className="font-bold text-amber-400">Administrator</span> to manage en route runs tasks and verify cash collection OTP codes.
           </>
         }
       />

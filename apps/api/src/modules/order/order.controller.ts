@@ -9,18 +9,9 @@ import { UserRole } from '@mangosteen/database';
 export class OrderController {
   constructor(private orderService: OrderService) {}
 
-  @Get('me')
-  @Roles(UserRole.CUSTOMER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getMyOrders(@Req() request: any) {
-    return this.orderService.getMyOrders(request.user.sub);
-  }
-
   @Post('checkout')
-  @Roles(UserRole.CUSTOMER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async checkout(@Req() request: any, @Body() body: any) {
-    return this.orderService.checkout(request.user.sub, body);
+  async checkout(@Body() body: any) {
+    return this.orderService.checkout(body);
   }
 
   // Admin Dashboard Actions
