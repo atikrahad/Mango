@@ -31,6 +31,7 @@ export default function AdminPortalPage() {
   // Dashboards States
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const {
     profile,
@@ -46,7 +47,7 @@ export default function AdminPortalPage() {
     copyToClipboard,
   } = useAffiliate(api, typeof window !== 'undefined' ? window.location.origin : '');
 
-  const { updateOrderStatus, processWithdrawal } = useAdminActions(api, fetchAdminData, user?.fullName);
+  const { updateOrderStatus, processWithdrawal, deleteOrder } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   // Sidebar Layout Navigation state
   const [activeSubTab, setActiveSubTab] = useState<string>('overview');
@@ -1073,59 +1074,172 @@ export default function AdminPortalPage() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto min-h-[250px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                        <th className="pb-3 pr-2">Reference</th>
-                        <th className="pb-3 pr-2">Buyer details</th>
-                        <th className="pb-3 pr-2">District</th>
-                        <th className="pb-3 pr-2">Total Amount</th>
-                        <th className="pb-3 pr-2">Gateway</th>
-                        <th className="pb-3 text-right">Operational Workflow</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredOrders.map((order) => (
-                        <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                          <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
-                          <td className="py-4 pr-2">
-                            <p className="font-extrabold text-slate-800">{order.customerName || order.user?.fullName || 'Guest'}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
-                          </td>
-                          <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
-                          <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>
-                          <td className="py-4 pr-2">
-                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                              order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
-                            }`}>
-                              {order.payment?.gateway}
-                            </span>
-                          </td>
-                          <td className="py-4 text-right flex justify-end gap-1.5">
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 text-sky-655 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              En Route
-                            </button>
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              Deliver
-                            </button>
-                            <button 
-                              onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                              className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                            >
-                              Drop
-                            </button>
-                          </td>
+                <div className="flex gap-6 items-start w-full relative">
+                  <div className={`transition-all duration-300 ${selectedOrder ? 'w-2/3' : 'w-full'} overflow-x-auto min-h-[250px]`}>
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+                          <th className="pb-3 pr-2">Reference</th>
+                          <th className="pb-3 pr-2">Buyer details</th>
+                          <th className="pb-3 pr-2">District</th>
+                          <th className="pb-3 pr-2">Total Amount</th>
+                          <th className="pb-3 pr-2">Gateway</th>
+                          <th className="pb-3 text-right">Operational Workflow</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredOrders.map((order) => (
+                          <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
+                            <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
+                            <td className="py-4 pr-2">
+                              <p className="font-extrabold text-slate-800">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
+                            </td>
+                            <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
+                            <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>
+                            <td className="py-4 pr-2">
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
+                              }`}>
+                                {order.payment?.gateway}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                              <button 
+                                onClick={() => setSelectedOrder(order)}
+                                title="View Details"
+                                className="bg-slate-50 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-amber-600 p-2 rounded-xl transition cursor-pointer shadow-sm"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
+                                className="bg-slate-50 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 text-sky-655 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
+                              >
+                                En Route
+                              </button>
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
+                                className="bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
+                              >
+                                Deliver
+                              </button>
+                              <button 
+                                onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                                className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
+                              >
+                                Drop
+                              </button>
+                              <button 
+                                onClick={() => deleteOrder(order.id)}
+                                title="Delete Order"
+                                className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-655 p-2 rounded-xl transition cursor-pointer shadow-sm"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {selectedOrder && (
+                    <div className="w-1/3 bg-white border border-slate-200 rounded-3xl p-6 flex flex-col gap-6 shadow-xl sticky top-6 text-slate-800 animate-slideInRight">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <div>
+                          <h3 className="font-extrabold text-sm text-slate-800">Order Ledger Details</h3>
+                          <p className="font-mono text-[10px] text-slate-400 mt-1">ID: {selectedOrder.id}</p>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedOrder(null)} 
+                          className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-655 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-4 text-xs">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Customer Information</p>
+                          <p className="font-extrabold text-slate-850 mt-1">{selectedOrder.customerName || selectedOrder.user?.fullName || 'Guest Checkout'}</p>
+                          <p className="text-slate-500 font-medium">{selectedOrder.customerEmail || selectedOrder.user?.email || 'No Email'}</p>
+                          <p className="text-slate-500 font-medium">{selectedOrder.customerPhone || selectedOrder.user?.phone || 'No Phone'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Delivery Details</p>
+                          <p className="text-slate-655 font-medium mt-1"><span className="font-bold text-slate-700">Address:</span> {selectedOrder.shippingAddress}</p>
+                          <p className="text-slate-655 font-medium"><span className="font-bold text-slate-700">District:</span> {selectedOrder.district}</p>
+                          <p className="text-slate-655 font-medium"><span className="font-bold text-slate-700">Time Slot:</span> {selectedOrder.deliverySlot}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Affiliate Attribution</p>
+                          <p className="text-slate-655 mt-1 font-semibold">
+                            Referral Code: {selectedOrder.referralCode ? (
+                              <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">{selectedOrder.referralCode}</span>
+                            ) : (
+                              <span className="text-slate-400 italic">None</span>
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4">
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-2">Cart Ledger Items</p>
+                          <div className="space-y-3">
+                            {selectedOrder.items?.map((item: any) => (
+                              <div key={item.id} className="flex justify-between items-start gap-4">
+                                <div>
+                                  <p className="font-bold text-slate-800">{item.variant?.product?.name || 'Product Item'}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">
+                                    {item.variant?.weightKg}kg Box × {item.quantity}
+                                  </p>
+                                </div>
+                                <span className="font-extrabold text-slate-700">{Number(item.price) * item.quantity} BDT</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4 flex flex-col gap-2">
+                          <div className="flex justify-between font-medium text-slate-500">
+                            <span>Subtotal:</span>
+                            <span>{Number(selectedOrder.totalAmount) - Number(selectedOrder.shippingCost) + Number(selectedOrder.discountApplied)} BDT</span>
+                          </div>
+                          {Number(selectedOrder.discountApplied) > 0 && (
+                            <div className="flex justify-between text-red-500 font-medium">
+                              <span>Discount Applied:</span>
+                              <span>-{selectedOrder.discountApplied} BDT</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium text-slate-500">
+                            <span>Shipping Cost:</span>
+                            <span>{selectedOrder.shippingCost} BDT</span>
+                          </div>
+                          <div className="flex justify-between font-extrabold text-sm text-emerald-600 border-t border-slate-100 pt-2">
+                            <span>Total Settlement:</span>
+                            <span>{selectedOrder.totalAmount} BDT</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4 flex flex-col gap-2">
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1">Affiliate commission payout</p>
+                          {selectedOrder.commission ? (
+                            <div className="flex justify-between items-center text-xs">
+                              <div>
+                                <p className="font-semibold text-slate-700">Commission Amount:</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Status: <span className="uppercase text-emerald-600 font-bold">{selectedOrder.commission.status}</span></p>
+                              </div>
+                              <span className="font-extrabold text-emerald-600">+{selectedOrder.commission.amount} BDT</span>
+                            </div>
+                          ) : (
+                            <p className="text-slate-400 italic text-[11px]">No affiliate commission for this order.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

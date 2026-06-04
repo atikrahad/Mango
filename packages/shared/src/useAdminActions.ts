@@ -34,5 +34,21 @@ export function useAdminActions(api: any, fetchAdminData: () => void, userFullNa
     }
   };
 
-  return { updateOrderStatus, processWithdrawal };
+  const deleteOrder = async (orderId: string) => {
+    if (!window.confirm('Are you absolutely sure you want to permanently delete this order? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/orders/admin/${orderId}`);
+      if (res.data?.success) {
+        useToastStore.getState().showToast('Order permanently deleted successfully.', 'success');
+        fetchAdminData();
+      }
+    } catch (e: any) {
+      const msg = e.response?.data?.error?.message || 'Failed to delete order.';
+      useToastStore.getState().showToast(msg, 'error');
+    }
+  };
+
+  return { updateOrderStatus, processWithdrawal, deleteOrder };
 }

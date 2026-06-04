@@ -388,7 +388,7 @@ model Transaction {
   
   createdAt DateTime @default(now())
 
-  order     Order    @relation(fields: [orderId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }

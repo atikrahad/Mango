@@ -5,7 +5,8 @@ import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
-  RefreshCw, CheckCircle, XCircle, ChevronRight, Star, Info, Lock
+  RefreshCw, CheckCircle, XCircle, ChevronRight, Star, Info, Lock,
+  Eye, Trash2, X
 } from 'lucide-react';
 import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAdminActions } from '@mangosteen/shared';
 
@@ -13,6 +14,7 @@ export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
 
@@ -50,7 +52,7 @@ export default function AdminPage() {
     }
   }, [isAuthenticated, user]);
 
-  const { updateOrderStatus, processWithdrawal } = useAdminActions(api, fetchAdminData, user?.fullName);
+  const { updateOrderStatus, processWithdrawal, deleteOrder } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   if (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN')) {
     return (
@@ -122,73 +124,186 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 🚀 Active Orders & Agent Assignments Queue */}
+        {/* 🚀 Active Orders & Details Drawer */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6">
           <div>
             <h3 className="font-extrabold text-lg text-slate-100 mb-1">Seasonal Orders Checkout Ledger</h3>
-            <p className="text-xs text-slate-400">Review consumer checkouts, assign delivery riders to district regions, and update en route status.</p>
+            <p className="text-xs text-slate-400">Review consumer checkouts, manage status, and delete orders if necessary.</p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-bold">
-                  <th className="pb-3">Order Reference</th>
-                  <th className="pb-3">Buyer details</th>
-                  <th className="pb-3">District</th>
-                  <th className="pb-3">Total Cost</th>
-                  <th className="pb-3">Gateway</th>
-                  <th className="pb-3 text-right">Actions Workflow</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-850">
-                {orders.map((order) => (
-                  <tr key={order.id} className="text-slate-300">
-                    <td className="py-4 font-mono font-bold text-slate-400">{order.id.substring(0, 8).toUpperCase()}</td>
-                    <td className="py-4">
-                      <p className="font-semibold text-slate-200">{order.customerName || order.user?.fullName || 'Guest'}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
-                    </td>
-                    <td className="py-4">📍 {order.district}</td>
-                    <td className="py-4 font-bold text-amber-400">{order.totalAmount} BDT</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        order.payment?.gateway === 'COD' ? 'bg-amber-500/10 text-amber-400' : 'bg-sky-500/10 text-sky-400'
-                      }`}>
-                        {order.payment?.gateway}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right flex justify-end gap-1.5">
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-sky-950/20 hover:border-sky-900 text-sky-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        En Route
-                      </button>
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-emerald-950/20 hover:border-emerald-900 text-emerald-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        Deliver
-                      </button>
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                        className="bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:border-red-900 text-red-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
-                      >
-                        Drop
-                      </button>
-                    </td>
+          <div className="flex gap-6 items-start w-full relative">
+            <div className={`transition-all duration-300 ${selectedOrder ? 'w-2/3' : 'w-full'} overflow-x-auto`}>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-bold">
+                    <th className="pb-3">Order Reference</th>
+                    <th className="pb-3">Buyer details</th>
+                    <th className="pb-3">District</th>
+                    <th className="pb-3">Total Cost</th>
+                    <th className="pb-3">Gateway</th>
+                    <th className="pb-3 text-right">Actions Workflow</th>
                   </tr>
-                ))}
-                {orders.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-slate-500 font-semibold">
-                      No seasonal checkouts registered in system yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-850">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="text-slate-300">
+                      <td className="py-4 font-mono font-bold text-slate-400">{order.id.substring(0, 8).toUpperCase()}</td>
+                      <td className="py-4">
+                        <p className="font-semibold text-slate-200">{order.customerName || order.user?.fullName || 'Guest'}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
+                      </td>
+                      <td className="py-4">📍 {order.district}</td>
+                      <td className="py-4 font-bold text-amber-400">{order.totalAmount} BDT</td>
+                      <td className="py-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          order.payment?.gateway === 'COD' ? 'bg-amber-500/10 text-amber-400' : 'bg-sky-500/10 text-sky-400'
+                        }`}>
+                          {order.payment?.gateway}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                        <button 
+                          onClick={() => setSelectedOrder(order)}
+                          title="View Details"
+                          className="bg-slate-900 border border-slate-800 hover:bg-amber-950/20 hover:border-amber-900 text-amber-400 p-1.5 rounded-lg transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
+                          className="bg-slate-900 border border-slate-800 hover:bg-sky-950/20 hover:border-sky-900 text-sky-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
+                        >
+                          En Route
+                        </button>
+                        <button 
+                          onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
+                          className="bg-slate-900 border border-slate-800 hover:bg-emerald-950/20 hover:border-emerald-900 text-emerald-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
+                        >
+                          Deliver
+                        </button>
+                        <button 
+                          onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                          className="bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:border-red-900 text-red-400 px-2.5 py-1 rounded-lg font-bold text-[10px] transition"
+                        >
+                          Drop
+                        </button>
+                        <button 
+                          onClick={() => deleteOrder(order.id)}
+                          title="Delete Order"
+                          className="bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:border-red-900 text-red-400 p-1.5 rounded-lg transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {orders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-slate-500 font-semibold">
+                        No seasonal checkouts registered in system yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedOrder && (
+              <div className="w-1/3 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl sticky top-6 text-slate-300 animate-slideInRight">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-100">Order Details</h3>
+                    <p className="font-mono text-[10px] text-slate-500 mt-1">ID: {selectedOrder.id}</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedOrder(null)} 
+                    className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-550 hover:text-slate-200 transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4 text-xs">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Customer Info</p>
+                    <p className="font-extrabold text-slate-200 mt-1">{selectedOrder.customerName || selectedOrder.user?.fullName || 'Guest Checkout'}</p>
+                    <p className="text-slate-400 font-medium">{selectedOrder.customerEmail || selectedOrder.user?.email || 'No Email'}</p>
+                    <p className="text-slate-400 font-medium">{selectedOrder.customerPhone || selectedOrder.user?.phone || 'No Phone'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider">Delivery Details</p>
+                    <p className="text-slate-300 font-medium mt-1"><span className="font-bold text-slate-500">Address:</span> {selectedOrder.shippingAddress}</p>
+                    <p className="text-slate-300 font-medium"><span className="font-bold text-slate-500">District:</span> {selectedOrder.district}</p>
+                    <p className="text-slate-300 font-medium"><span className="font-bold text-slate-500">Slot:</span> {selectedOrder.deliverySlot}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider">Affiliate Attribution</p>
+                    <p className="text-slate-300 mt-1 font-semibold">
+                      Code: {selectedOrder.referralCode ? (
+                        <span className="font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{selectedOrder.referralCode}</span>
+                      ) : (
+                        <span className="text-slate-500 italic">None</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4">
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider mb-2">Order Items</p>
+                    <div className="space-y-3">
+                      {selectedOrder.items?.map((item: any) => (
+                        <div key={item.id} className="flex justify-between items-start gap-4">
+                          <div>
+                            <p className="font-bold text-slate-200">{item.variant?.product?.name || 'Product Item'}</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {item.variant?.weightKg}kg Box × {item.quantity}
+                            </p>
+                          </div>
+                          <span className="font-extrabold text-slate-300">{Number(item.price) * item.quantity} BDT</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4 flex flex-col gap-2">
+                    <div className="flex justify-between font-medium text-slate-400">
+                      <span>Subtotal:</span>
+                      <span>{Number(selectedOrder.totalAmount) - Number(selectedOrder.shippingCost) + Number(selectedOrder.discountApplied)} BDT</span>
+                    </div>
+                    {Number(selectedOrder.discountApplied) > 0 && (
+                      <div className="flex justify-between text-red-400 font-medium">
+                        <span>Discount Applied:</span>
+                        <span>-{selectedOrder.discountApplied} BDT</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-medium text-slate-400">
+                      <span>Shipping Cost:</span>
+                      <span>{selectedOrder.shippingCost} BDT</span>
+                    </div>
+                    <div className="flex justify-between font-extrabold text-sm text-emerald-400 border-t border-slate-800 pt-2">
+                      <span>Total Paid:</span>
+                      <span>{selectedOrder.totalAmount} BDT</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-4 flex flex-col gap-2">
+                    <p className="text-[10px] text-slate-555 uppercase font-black tracking-wider mb-1">Affiliate Commission</p>
+                    {selectedOrder.commission ? (
+                      <div className="flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-semibold text-slate-300">Commission Amount:</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Status: <span className="uppercase text-emerald-500 font-bold">{selectedOrder.commission.status}</span></p>
+                        </div>
+                        <span className="font-extrabold text-emerald-400">+{selectedOrder.commission.amount} BDT</span>
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 italic text-[11px]">No affiliate commission attribution.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

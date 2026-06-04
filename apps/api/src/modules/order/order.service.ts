@@ -328,4 +328,29 @@ export class OrderService {
       data: updated,
     };
   }
+
+  async deleteOrder(id: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+    });
+
+    if (!order) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'ORDER_NOT_FOUND',
+          message: 'Order not found.',
+        },
+      });
+    }
+
+    await this.prisma.order.delete({
+      where: { id },
+    });
+
+    return {
+      success: true,
+      message: 'Order deleted successfully.',
+    };
+  }
 }
