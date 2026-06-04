@@ -7,6 +7,7 @@ import {
   MapPin, Phone, ShoppingBag, Truck, Lock, 
   CheckCircle2, Compass, RefreshCw, Smartphone, KeyRound
 } from 'lucide-react';
+import { Toast, useToastStore, PortalHeader, PortalLockScreen } from '@mangosteen/shared';
 
 export default function DeliveryPage() {
   const { user, isAuthenticated } = useAuthStore();
@@ -21,11 +22,8 @@ export default function DeliveryPage() {
   const [otpError, setOtpError] = useState('');
 
   // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    useToastStore.getState().showToast(message, type);
   };
 
   const fetchAssignedRuns = async () => {
@@ -100,23 +98,14 @@ export default function DeliveryPage() {
 
   if (!isAuthenticated || user?.role !== 'DELIVERY_AGENT') {
     return (
-      <div className="flex-grow flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto min-h-[60vh] gap-6">
-        <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center text-3xl shadow-lg">
-          <Lock className="w-8 h-8 text-amber-500" />
-        </div>
-        <div>
-          <h2 className="font-extrabold text-2xl text-slate-100 mb-2">Delivery Portal Locked</h2>
-          <p className="text-sm text-slate-400 leading-relaxed">
+      <PortalLockScreen
+        title="Delivery Portal Locked"
+        description={
+          <>
             Please sign in as a <span className="font-bold text-amber-400">Delivery Agent</span> rider to manage en route runs tasks and verify cash collection OTP codes.
-          </p>
-        </div>
-        <a 
-          href="/"
-          className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm transition"
-        >
-          Return to Catalog
-        </a>
-      </div>
+          </>
+        }
+      />
     );
   }
 
@@ -124,28 +113,13 @@ export default function DeliveryPage() {
     <div className="flex-grow flex flex-col min-h-screen">
       
       {/* Header */}
-      <header className="sticky top-0 z-40 glass-panel border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <a href="/" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg">
-            🥭
-          </a>
-          <div>
-            <h1 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-              Rider Logistics Portal
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">
-              Assigned Runs Tasks
-            </p>
-          </div>
-        </div>
-
-        <button 
-          onClick={fetchAssignedRuns}
-          className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
-        >
-          <RefreshCw className="w-4 h-4" /> Sync Runs
-        </button>
-      </header>
+      <PortalHeader
+        title="Rider Logistics Portal"
+        subtitle="Assigned Runs Tasks"
+        actionLabel="Sync Runs"
+        actionIcon={<RefreshCw className="w-4 h-4" />}
+        onActionClick={fetchAssignedRuns}
+      />
 
       <div className="px-4 py-8 max-w-lg mx-auto w-full flex flex-col gap-6">
         
@@ -289,20 +263,7 @@ export default function DeliveryPage() {
       )}
 
       {/* 🚀 Active toast message */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2.5 border ${
-            toast.type === 'success' ? 'bg-slate-900 border-emerald-500/30 text-emerald-400' :
-            toast.type === 'error' ? 'bg-slate-900 border-red-500/30 text-red-400' :
-            'bg-slate-900 border-amber-500/30 text-amber-400'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { Toast, useToastStore } from '@mangosteen/shared';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
   RefreshCw, CheckCircle2, XCircle, ChevronRight, ChevronLeft, Star, Info, Lock,
@@ -100,11 +101,8 @@ export default function AdminPortalPage() {
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Notification Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    useToastStore.getState().showToast(message, type);
   };
 
   // Sidebar Width & Collapsible states
@@ -784,20 +782,7 @@ export default function AdminPortalPage() {
         </div>
 
         {/* Toast alert */}
-        {toast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-            <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-              toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-              toast.type === 'error' ? 'border-red-500 text-red-600' :
-              'border-amber-500 text-amber-600'
-            }`}>
-              <span className="text-base">
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-              </span>
-              <span>{toast.message}</span>
-            </div>
-          </div>
-        )}
+        <Toast />
       </div>
     );
   }
@@ -2173,20 +2158,7 @@ export default function AdminPortalPage() {
         </div>
 
         {/* Global Toast notices */}
-        {toast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-            <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-              toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-              toast.type === 'error' ? 'border-red-500 text-red-600' :
-              'border-amber-500 text-amber-600'
-            }`}>
-              <span className="text-base">
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-              </span>
-              <span>{toast.message}</span>
-            </div>
-          </div>
-        )}
+        <Toast />
       </div>
     );
   }
@@ -2691,20 +2663,7 @@ export default function AdminPortalPage() {
       </div>
 
       {/* Global Toast notices */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`px-5 py-3.5 rounded-2xl text-xs font-black shadow-2xl flex items-center gap-2.5 border bg-white ${
-            toast.type === 'success' ? 'border-emerald-500 text-emerald-600' :
-            toast.type === 'error' ? 'border-red-500 text-red-600' :
-            'border-amber-500 text-amber-600'
-          }`}>
-            <span className="text-base">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠' : 'ℹ'}
-            </span>
-            <span>{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <Toast />
     </div>
   );
 }
