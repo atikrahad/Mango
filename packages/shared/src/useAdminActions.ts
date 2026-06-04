@@ -1,11 +1,10 @@
 import { useToastStore } from './toastStore';
 
 export function useAdminActions(api: any, fetchAdminData: () => void, userFullName?: string) {
-  const updateOrderStatus = async (orderId: string, status: string, deliveryAgentId?: string) => {
+  const updateOrderStatus = async (orderId: string, status: string) => {
     try {
       const res = await api.patch(`/orders/admin/${orderId}/status`, {
         status,
-        deliveryAgentId: deliveryAgentId || undefined,
       });
 
       if (res.data?.success) {

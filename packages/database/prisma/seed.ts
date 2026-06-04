@@ -2,10 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 export const UserRole = {
-  CUSTOMER: 'CUSTOMER',
   AFFILIATE: 'AFFILIATE',
   ADMIN: 'ADMIN',
-  DELIVERY_AGENT: 'DELIVERY_AGENT',
   SUPER_ADMIN: 'SUPER_ADMIN'
 } as const;
 
@@ -37,13 +35,13 @@ async function main() {
     create: {
       email: 'rider1@mangosteen.com',
       fullName: 'Rider Rahim',
-      role: UserRole.DELIVERY_AGENT,
+      role: UserRole.ADMIN,
       isActive: true,
       isVerified: true,
       phone: '+8801700000001',
     },
   });
-  console.log(`🛵 Delivery Agent seeded: ${deliveryAgent.email}`);
+  console.log(`🛵 Rider Admin seeded: ${deliveryAgent.email}`);
 
   // 2. Create Categories
   const catOrganic = await prisma.category.upsert({
@@ -171,7 +169,7 @@ async function main() {
     create: {
       email: 'customer@mangosteen.com',
       fullName: 'Customer Karim',
-      role: UserRole.CUSTOMER,
+      role: UserRole.AFFILIATE,
       isActive: true,
       isVerified: true,
       phone: '+8801600000002',

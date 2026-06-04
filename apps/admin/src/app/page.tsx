@@ -31,7 +31,6 @@ export default function AdminPortalPage() {
   // Dashboards States
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
-  const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const {
     profile,
@@ -145,10 +144,9 @@ export default function AdminPortalPage() {
   async function fetchAdminData() {
     try {
       setLoading(true);
-      const [ordRes, witRes, riderRes, prodRes, catRes] = await Promise.all([
+      const [ordRes, witRes, prodRes, catRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
-        api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/catalog/products?includeInactive=true'),
         api.get('/catalog/categories'),
       ]);
@@ -158,9 +156,6 @@ export default function AdminPortalPage() {
       }
       if (witRes.data?.success) {
         setWithdrawals(witRes.data.data);
-      }
-      if (riderRes.data?.success) {
-        setDeliveryRiders(riderRes.data.data);
       }
       if (prodRes.data?.success) {
         setProducts(prodRes.data.data.items);
@@ -1033,10 +1028,6 @@ export default function AdminPortalPage() {
                           <span className="font-bold text-emerald-600 font-mono">14ms (Optimal)</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Riders Online:</span>
-                          <span className="font-bold text-sky-600 font-mono">{deliveryRiders.length} Agents</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
                           <span className="text-slate-400">Pending Comm:</span>
                           <span className="font-bold text-amber-600 font-mono">
                             {withdrawals.filter(w => w.status === 'PENDING').reduce((sum, w) => sum + Number(w.amount), 0)} BDT
@@ -1091,8 +1082,6 @@ export default function AdminPortalPage() {
                         <th className="pb-3 pr-2">District</th>
                         <th className="pb-3 pr-2">Total Amount</th>
                         <th className="pb-3 pr-2">Gateway</th>
-                        <th className="pb-3 pr-2">COD OTP Status</th>
-                        <th className="pb-3 pr-2">Assigned Rider</th>
                         <th className="pb-3 text-right">Operational Workflow</th>
                       </tr>
                     </thead>
@@ -1112,29 +1101,6 @@ export default function AdminPortalPage() {
                             }`}>
                               {order.payment?.gateway}
                             </span>
-                          </td>
-                          <td className="py-4 pr-2">
-                            {order.payment?.gateway === 'COD' ? (
-                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                                order.codVerified ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-red-50 text-red-600 border border-red-200/50'
-                              }`}>
-                                {order.codVerified ? 'Verified' : 'Pending OTP'}
-                              </span>
-                            ) : (
-                              <span className="text-slate-300 font-semibold">—</span>
-                            )}
-                          </td>
-                          <td className="py-4 pr-2">
-                            <select
-                              value={order.deliveryAgentId || ''}
-                              onChange={(e) => updateOrderStatus(order.id, 'SHIPPED', e.target.value)}
-                              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 text-xs focus:outline-none focus:border-emerald-500 font-black cursor-pointer shadow-sm"
-                            >
-                              <option value="">Assign Rider</option>
-                              {deliveryRiders.map((r) => (
-                                <option key={r.id} value={r.id}>{r.fullName || r.name} ({r.email})</option>
-                              ))}
-                            </select>
                           </td>
                           <td className="py-4 text-right flex justify-end gap-1.5">
                             <button 

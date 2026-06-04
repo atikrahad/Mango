@@ -28,11 +28,4 @@ export class OrderController {
   async updateOrderStatus(@Param('id') id: string, @Body() body: any) {
     return this.orderService.updateOrderStatus(id, body);
   }
-
-  @Get('riders')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getDeliveryRiders() {
-    return this.orderService.getDeliveryRiders();
-  }
 }

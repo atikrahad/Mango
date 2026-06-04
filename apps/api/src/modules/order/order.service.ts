@@ -268,7 +268,6 @@ export class OrderService {
           },
         },
         payment: true,
-        deliveryAgent: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -280,7 +279,7 @@ export class OrderService {
   }
 
   async updateOrderStatus(id: string, body: any) {
-    const { status, deliveryAgentId } = body;
+    const { status } = body;
 
     const order = await this.prisma.order.findUnique({
       where: { id },
@@ -300,12 +299,8 @@ export class OrderService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const updateData: any = { status };
 
-      if (deliveryAgentId) {
-        updateData.deliveryAgentId = deliveryAgentId;
-      }
-
-      // If transition to DELIVERED (and not COD which is handled via secure logistics OTP)
-      if (status === OrderStatus.DELIVERED && order.payment?.gateway !== 'COD') {
+      // If transition to DELIVERED (including COD now, since we no longer have delivery agent OTP confirmation)
+      if (status === OrderStatus.DELIVERED) {
         // Approve affiliate commission immediately if exist
         if (order.commission) {
           await tx.affiliateCommission.update({
@@ -331,21 +326,6 @@ export class OrderService {
       success: true,
       message: `Order status updated successfully to ${status}.`,
       data: updated,
-    };
-  }
-
-  async getDeliveryRiders() {
-    const riders = await this.prisma.user.findMany({
-      where: { role: 'ADMIN', isActive: true },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-      },
-    });
-    return {
-      success: true,
-      data: riders,
     };
   }
 }

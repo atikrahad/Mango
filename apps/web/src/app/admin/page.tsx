@@ -15,8 +15,7 @@ export default function AdminPage() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Dynamic delivery riders list
-  const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
+
 
   // Notification Toast State
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -26,10 +25,9 @@ export default function AdminPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [ordRes, witRes, riderRes] = await Promise.all([
+      const [ordRes, witRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
-        api.get('/orders/riders').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
       if (ordRes.data?.success) {
@@ -37,9 +35,6 @@ export default function AdminPage() {
       }
       if (witRes.data?.success) {
         setWithdrawals(witRes.data.data);
-      }
-      if (riderRes.data?.success) {
-        setDeliveryRiders(riderRes.data.data);
       }
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
@@ -143,8 +138,6 @@ export default function AdminPage() {
                   <th className="pb-3">District</th>
                   <th className="pb-3">Total Cost</th>
                   <th className="pb-3">Gateway</th>
-                  <th className="pb-3">COD OTP status</th>
-                  <th className="pb-3">Assigned Rider</th>
                   <th className="pb-3 text-right">Actions Workflow</th>
                 </tr>
               </thead>
@@ -164,29 +157,6 @@ export default function AdminPage() {
                       }`}>
                         {order.payment?.gateway}
                       </span>
-                    </td>
-                    <td className="py-4">
-                      {order.payment?.gateway === 'COD' ? (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          order.codVerified ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
-                        }`}>
-                          {order.codVerified ? 'Verified' : 'Pending OTP'}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500">—</span>
-                      )}
-                    </td>
-                    <td className="py-4">
-                      <select
-                        value={order.deliveryAgentId || ''}
-                        onChange={(e) => updateOrderStatus(order.id, 'SHIPPED', e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-300 text-xs focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="">Choose Agent</option>
-                        {deliveryRiders.map((r) => (
-                          <option key={r.id} value={r.id}>{r.fullName || r.name} ({r.email})</option>
-                        ))}
-                      </select>
                     </td>
                     <td className="py-4 text-right flex justify-end gap-1.5">
                       <button 

@@ -35,7 +35,6 @@ model User {
   reviews          Review[]
   auditLogs        AuditLog[]
   notifications    Notification[]
-  deliveryRuns     Order[] @relation("DeliveryAgentRuns")
 
   @@index([email])
   @@index([role])
@@ -221,10 +220,6 @@ model Order {
   district        String
   deliveryZoneId  String?
   deliverySlot    String
-  deliveryAgentId String?
-  deliveryAgentName String?
-  deliveryOtp     String?        // Code to complete COD/Secure delivery
-  codVerified     Boolean        @default(false)
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -232,7 +227,6 @@ model Order {
   // Relations
   user            User?          @relation(fields: [userId], references: [id])
   deliveryZone    DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id])
-  deliveryAgent   User?          @relation("DeliveryAgentRuns", fields: [deliveryAgentId], references: [id])
   items           OrderItem[]
   payment         Payment?
   commission      AffiliateCommission?
@@ -240,7 +234,6 @@ model Order {
 
   @@index([userId])
   @@index([status])
-  @@index([deliveryAgentId])
 }
 
 model OrderItem {
