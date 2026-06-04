@@ -7,7 +7,7 @@ import {
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
   RefreshCw, CheckCircle, XCircle, ChevronRight, Star, Info, Lock
 } from 'lucide-react';
-import { Toast, useToastStore, PortalHeader, PortalLockScreen } from '@mangosteen/shared';
+import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAdminActions } from '@mangosteen/shared';
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore();
@@ -55,39 +55,7 @@ export default function AdminPage() {
     }
   }, [isAuthenticated, user]);
 
-  const updateOrderStatus = async (orderId: string, status: string, deliveryAgentId?: string) => {
-    try {
-      const res = await api.patch(`/orders/admin/${orderId}/status`, {
-        status,
-        deliveryAgentId: deliveryAgentId || undefined,
-      });
-
-      if (res.data?.success) {
-        showToast(`Order status updated successfully to ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to update order.';
-      showToast(msg, 'error');
-    }
-  };
-
-  const processWithdrawal = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      const res = await api.patch(`/affiliates/admin/withdrawals/${requestId}`, {
-        status,
-        notes: `Processed and cleared by admin: ${user?.fullName}`,
-      });
-
-      if (res.data?.success) {
-        showToast(`Withdrawal payout request marked as ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to settle payout.';
-      showToast(msg, 'error');
-    }
-  };
+  const { updateOrderStatus, processWithdrawal } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   if (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN')) {
     return (

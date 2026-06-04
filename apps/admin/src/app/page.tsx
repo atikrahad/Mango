@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Toast, useToastStore } from '@mangosteen/shared';
+import { Toast, useToastStore, useAffiliate, useAdminActions } from '@mangosteen/shared';
 import { 
   ShieldCheck, ShoppingBag, Truck, Users, AlertTriangle, 
   RefreshCw, CheckCircle2, XCircle, ChevronRight, ChevronLeft, Star, Info, Lock,
@@ -32,8 +32,22 @@ export default function AdminPortalPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [deliveryRiders, setDeliveryRiders] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const {
+    profile,
+    loading: affiliateLoading,
+    withdrawAmount, setWithdrawAmount,
+    withdrawMethod, setWithdrawMethod,
+    withdrawDetails, setWithdrawDetails,
+    withdrawLoading,
+    generatedLink,
+    linkCopied,
+    fetchAffiliateProfile,
+    handleWithdrawSubmit,
+    copyToClipboard,
+  } = useAffiliate(api, typeof window !== 'undefined' ? window.location.origin : '');
+
+  const { updateOrderStatus, processWithdrawal } = useAdminActions(api, fetchAdminData, user?.fullName);
 
   // Sidebar Layout Navigation state
   const [activeSubTab, setActiveSubTab] = useState<string>('overview');
@@ -90,15 +104,7 @@ export default function AdminPortalPage() {
   });
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
 
-  // Withdrawal Payout form state (Affiliate)
-  const [withdrawAmount, setWithdrawAmount] = useState('500');
-  const [withdrawMethod, setWithdrawMethod] = useState('BKASH');
-  const [withdrawDetails, setWithdrawDetails] = useState('');
-  const [withdrawLoading, setWithdrawLoading] = useState(false);
 
-  // Referral campaign links builder state
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
 
   // Notification Toast State
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -136,7 +142,7 @@ export default function AdminPortalPage() {
   }, [isResizing]);
 
   // Sync / Fetch functions
-  const fetchAdminData = async () => {
+  async function fetchAdminData() {
     try {
       setLoading(true);
       const [ordRes, witRes, riderRes, prodRes, catRes] = await Promise.all([
@@ -165,24 +171,6 @@ export default function AdminPortalPage() {
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
       showToast('Could not fetch administrative operations ledger queues.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAffiliateProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/affiliates/me');
-      if (res.data?.success) {
-        setProfile(res.data.data);
-        if (res.data.data?.referralCode) {
-          setGeneratedLink(`${window.location.origin}/?ref=${res.data.data.referralCode}`);
-        }
-      }
-    } catch (e: any) {
-      console.error('Error fetching affiliate profile:', e);
-      showToast('Could not fetch active affiliate performance wallet details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -231,87 +219,14 @@ export default function AdminPortalPage() {
     }
   };
 
-  // Action Handlers (Admin)
-  const updateOrderStatus = async (orderId: string, status: string, deliveryAgentId?: string) => {
-    try {
-      const res = await api.patch(`/orders/admin/${orderId}/status`, {
-        status,
-        deliveryAgentId: deliveryAgentId || undefined,
-      });
-
-      if (res.data?.success) {
-        showToast(`Order status updated successfully to ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to update order.';
-      showToast(msg, 'error');
-    }
-  };
-
-  const processWithdrawal = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      const res = await api.patch(`/affiliates/admin/withdrawals/${requestId}`, {
-        status,
-        notes: `Processed and cleared by operations manager: ${user?.fullName}`,
-      });
-
-      if (res.data?.success) {
-        showToast(`Withdrawal payout request marked as ${status}!`, 'success');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Failed to settle payout request.';
-      showToast(msg, 'error');
-    }
-  };
-
-  // Action Handlers (Affiliate)
-  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+  const handleWithdrawFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = Number(withdrawAmount);
-    if (amt < 500) {
-      showToast('Minimum payout balance threshold is 500 BDT.', 'error');
-      return;
-    }
-    if (amt > Number(profile?.walletBalance || 0)) {
-      showToast('Specified withdrawal amount exceeds available wallet balance.', 'error');
-      return;
-    }
-    if (!withdrawDetails) {
-      showToast('Please specify cash account or bank details routing credentials.', 'error');
-      return;
-    }
-
-    try {
-      setWithdrawLoading(true);
-      const res = await api.post('/affiliates/withdrawals', {
-        amount: amt,
-        method: withdrawMethod,
-        paymentDetails: withdrawDetails,
-      });
-
-      if (res.data?.success) {
-        showToast(res.data.message || 'Withdrawal balance payout submitted for review!', 'success');
-        setWithdrawDetails('');
-        setWithdrawAmount('500');
-        fetchAffiliateProfile();
-        setActiveSubTab('ledger');
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Could not register payout request.';
-      showToast(msg, 'error');
-    } finally {
-      setWithdrawLoading(false);
-    }
+    await handleWithdrawSubmit(() => {
+      setActiveSubTab('ledger');
+    });
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setLinkCopied(true);
-    showToast('Campaign referral link copied to clipboard!', 'success');
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
+
 
   // Auto-generate slug from name on creation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2346,7 +2261,7 @@ export default function AdminPortalPage() {
         </header>
 
         {/* Sync spinner */}
-        {loading ? (
+        {affiliateLoading ? (
           <div className="flex-grow flex items-center justify-center p-20 gap-2.5 text-slate-400">
             <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
             <span className="text-xs font-extrabold uppercase tracking-widest">Syncing Performance Wallet...</span>
@@ -2516,7 +2431,7 @@ export default function AdminPortalPage() {
                   <p className="text-xs text-slate-400 font-semibold">Withdraw your cleared commission wallet balance directly into MFS mobile cash or bank accounts.</p>
                 </div>
 
-                <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleWithdrawFormSubmit} className="flex flex-col gap-4">
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">

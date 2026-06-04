@@ -7,47 +7,23 @@ import {
   TrendingUp, Award, Wallet, ArrowUpRight, Copy, CheckCircle2, 
   Clock, Share2, Compass, AlertCircle, RefreshCw, ChevronRight, Lock
 } from 'lucide-react';
-import { Toast, useToastStore, PortalHeader, PortalLockScreen } from '@mangosteen/shared';
+import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAffiliate } from '@mangosteen/shared';
 
 export default function AffiliatePage() {
   const { user, isAuthenticated } = useAuthStore();
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Withdrawal form state
-  const [withdrawAmount, setWithdrawAmount] = useState('500');
-  const [withdrawMethod, setWithdrawMethod] = useState('BKASH');
-  const [withdrawDetails, setWithdrawDetails] = useState('');
-  const [withdrawLoading, setWithdrawLoading] = useState(false);
-
-  // Deep Link generator state
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
-
-  // Notification Toast State
-  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    useToastStore.getState().showToast(message, type);
-  };
-
-  const fetchAffiliateProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/affiliates/me');
-      if (res.data?.success) {
-        setProfile(res.data.data);
-        
-        // Setup initial referral link
-        if (res.data.data?.referralCode) {
-          setGeneratedLink(`${window.location.origin}/?ref=${res.data.data.referralCode}`);
-        }
-      }
-    } catch (e: any) {
-      console.error('Error fetching affiliate profile:', e);
-      showToast('Could not fetch active affiliate analytics details.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    profile,
+    loading,
+    withdrawAmount, setWithdrawAmount,
+    withdrawMethod, setWithdrawMethod,
+    withdrawDetails, setWithdrawDetails,
+    withdrawLoading,
+    generatedLink,
+    linkCopied,
+    fetchAffiliateProfile,
+    handleWithdrawSubmit,
+    copyToClipboard,
+  } = useAffiliate(api, typeof window !== 'undefined' ? window.location.origin : '');
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'AFFILIATE') {
@@ -55,53 +31,9 @@ export default function AffiliatePage() {
     }
   }, [isAuthenticated, user]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setLinkCopied(true);
-    showToast('Referral link copied to clipboard successfully!', 'success');
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
-
-  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+  const handleWithdrawFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const amt = Number(withdrawAmount);
-    if (amt < 500) {
-      showToast('Minimum withdrawal payout threshold is 500 BDT.', 'error');
-      return;
-    }
-
-    if (amt > Number(profile?.walletBalance)) {
-      showToast('Withdrawal amount exceeds your active wallet balance.', 'error');
-      return;
-    }
-
-    if (!withdrawDetails) {
-      showToast('Please specify withdrawal payment account details.', 'error');
-      return;
-    }
-
-    try {
-      setWithdrawLoading(true);
-      const res = await api.post('/affiliates/withdrawals', {
-        amount: amt,
-        method: withdrawMethod,
-        paymentDetails: withdrawDetails,
-      });
-
-      if (res.data?.success) {
-        showToast(res.data.message || 'Withdrawal request submitted successfully!', 'success');
-        setWithdrawDetails('');
-        setWithdrawAmount('500');
-        // Refresh profile
-        fetchAffiliateProfile();
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Could not register payout request.';
-      showToast(msg, 'error');
-    } finally {
-      setWithdrawLoading(false);
-    }
+    await handleWithdrawSubmit();
   };
 
   if (!isAuthenticated || user?.role !== 'AFFILIATE') {
@@ -255,7 +187,7 @@ export default function AffiliatePage() {
                   <p className="text-xs text-slate-400">Withdraw approved wallet balance directly to your bKash, Nagad, or bank accounts.</p>
                 </div>
 
-                <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleWithdrawFormSubmit} className="flex flex-col gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs text-slate-400 font-semibold">Amount (BDT)</label>
