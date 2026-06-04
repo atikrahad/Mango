@@ -1084,6 +1084,7 @@ export default function AdminPortalPage() {
                           <th className="pb-3 pr-2">District</th>
                           <th className="pb-3 pr-2">Total Amount</th>
                           <th className="pb-3 pr-2">Gateway</th>
+                          <th className="pb-3 pr-2">Status</th>
                           <th className="pb-3 text-right">Operational Workflow</th>
                         </tr>
                       </thead>
@@ -1104,6 +1105,25 @@ export default function AdminPortalPage() {
                                 {order.payment?.gateway}
                               </span>
                             </td>
+                            <td className="py-4 pr-2">
+                              <select
+                                value={order.status}
+                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold uppercase border cursor-pointer transition focus:outline-none shadow-sm ${
+                                  order.status === 'DELIVERED' ? 'bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/50' :
+                                  order.status === 'SHIPPED' ? 'bg-sky-50 border-sky-200/60 text-sky-700 hover:bg-sky-100/50' :
+                                  order.status === 'CANCELLED' ? 'bg-red-50 border-red-200/60 text-red-700 hover:bg-red-100/50' :
+                                  order.status === 'CONFIRMED' ? 'bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100/50' :
+                                  'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100/50'
+                                }`}
+                              >
+                                <option value="PENDING" className="bg-white text-slate-800">Pending</option>
+                                <option value="CONFIRMED" className="bg-white text-slate-800">Confirmed</option>
+                                <option value="SHIPPED" className="bg-white text-slate-800">Shipped</option>
+                                <option value="DELIVERED" className="bg-white text-slate-800">Delivered</option>
+                                <option value="CANCELLED" className="bg-white text-slate-800">Cancelled</option>
+                              </select>
+                            </td>
                             <td className="py-4 text-right flex justify-end gap-1.5 items-center">
                               <button 
                                 onClick={() => setSelectedOrder(order)}
@@ -1111,24 +1131,6 @@ export default function AdminPortalPage() {
                                 className="bg-slate-50 border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-amber-600 p-2 rounded-xl transition cursor-pointer shadow-sm"
                               >
                                 <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                                className="bg-slate-50 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 text-sky-655 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                              >
-                                En Route
-                              </button>
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                                className="bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                              >
-                                Deliver
-                              </button>
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                                className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-300 text-red-600 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer shadow-sm"
-                              >
-                                Drop
                               </button>
                               <button 
                                 onClick={() => deleteOrder(order.id)}

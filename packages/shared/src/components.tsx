@@ -1,26 +1,60 @@
-import React from 'react';
-import { Lock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Lock, CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 import { useToastStore } from './toastStore';
 
 // 1. Toast Notification Component
 export const Toast: React.FC = () => {
-  const { message, type } = useToastStore();
+  const { message, type, hideToast } = useToastStore();
+  const [mounted, setMounted] = useState(false);
 
-  if (!message) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-      <div className={`px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2.5 border ${
-        type === 'success' ? 'bg-slate-900 border-emerald-500/30 text-emerald-400' :
-        type === 'error' ? 'bg-slate-900 border-red-500/30 text-red-400' :
-        'bg-slate-900 border-amber-500/30 text-amber-400'
-      }`}>
-        <span className="text-base">
-          {type === 'success' ? '✓' : type === 'error' ? '⚠' : 'ℹ'}
-        </span>
-        <span>{message}</span>
+  if (!mounted || !message) return null;
+
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes toast-slide-in {
+          0% {
+            transform: translateY(1.5rem) scale(0.95);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-toast-slide-in {
+          animation: toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+      <div className="fixed bottom-6 right-6 z-[9999] animate-toast-slide-in max-w-sm">
+        <div className={`px-4 py-3 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-3 border backdrop-blur-md transition-all duration-300 ${
+          type === 'success' ? 'bg-slate-900/95 border-emerald-500/20 text-emerald-400' :
+          type === 'error' ? 'bg-slate-900/95 border-red-500/20 text-red-400' :
+          'bg-slate-900/95 border-amber-500/20 text-amber-400'
+        }`}>
+          <div className="shrink-0">
+            {type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            {type === 'error' && <AlertTriangle className="w-4 h-4 text-red-400" />}
+            {type === 'info' && <Info className="w-4 h-4 text-amber-400" />}
+          </div>
+          <div className="flex-grow pr-2 text-slate-100 font-semibold leading-relaxed">
+            {message}
+          </div>
+          <button 
+            onClick={hideToast}
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-350 hover:bg-slate-800/50 transition cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
-    </div>
+    </>,
+    document.body
   );
 };
 
