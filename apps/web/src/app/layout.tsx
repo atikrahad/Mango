@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Mangosteen | Premium Farm-to-Table Mangoes & Affiliate Network',
+  title: 'MangoVaiya | Premium Farm-to-Table Mangoes & Affiliate Network',
   description: 'Buy premium, organic, naturally sweetened seasonal mangoes (Himsagar, Langra, Amrapali) direct from Rajshahi orchards. Powered by a secure affiliate marketing ecosystem.',
   keywords: 'mangoes online, Rajshahi mangoes, organic himsagar, buy amrapali online, affiliate network, cash on delivery, secure OTP delivery',
 };

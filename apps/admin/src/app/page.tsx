@@ -17,6 +17,128 @@ import {
   BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
 
+interface ColumnDef<T> {
+  header: string;
+  render: (item: T, index: number) => React.ReactNode;
+  align?: 'left' | 'center' | 'right';
+  className?: string;
+}
+
+interface PaginatedTableProps<T> {
+  data: T[];
+  columns: ColumnDef<T>[];
+  pageSize?: number;
+  emptyMessage?: string;
+}
+
+export function PaginatedTable<T>({
+  data,
+  columns,
+  pageSize = 10,
+  emptyMessage = "No records found.",
+}: PaginatedTableProps<T>) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data.length]);
+
+  const totalItems = data.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const currentData = data.slice(startIndex, endIndex);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="overflow-x-auto w-full">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+              {columns.map((col, idx) => (
+                <th
+                  key={idx}
+                  className={`pb-3 pr-2 font-extrabold uppercase tracking-wider ${
+                    col.align === 'center' ? 'text-center' :
+                    col.align === 'right' ? 'text-right' : 'text-left'
+                  } ${col.className || ''}`}
+                >
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {currentData.map((item, rowIdx) => (
+              <tr key={rowIdx} className="text-slate-655 hover:bg-slate-50/80 transition">
+                {columns.map((col, colIdx) => (
+                  <td
+                    key={colIdx}
+                    className={`py-4 pr-2 ${
+                      col.align === 'center' ? 'text-center' :
+                      col.align === 'right' ? 'text-right' : 'text-left'
+                    } ${col.className || ''}`}
+                  >
+                    {col.render(item, startIndex + rowIdx)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {totalItems === 0 && (
+              <tr>
+                <td colSpan={columns.length} className="py-8 text-center text-slate-400 font-bold">
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 mt-2">
+          <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+            Showing <span className="text-slate-700">{totalItems === 0 ? 0 : startIndex + 1}</span> to{' '}
+            <span className="text-slate-700">{endIndex}</span> of{' '}
+            <span className="text-slate-700">{totalItems}</span> records
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-black text-slate-655 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-0.5"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Previous
+            </button>
+            <div className="flex items-center gap-1 px-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black transition cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-black text-slate-655 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-0.5"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPortalPage() {
   const { user, isAuthenticated, setSession, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -33,6 +155,11 @@ export default function AdminPortalPage() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+
   const {
     profile,
     loading: affiliateLoading,
@@ -88,6 +215,7 @@ export default function AdminPortalPage() {
     price: '',
     discount: '0',
     initialStock: '100',
+    commissionPercentage: '5.0',
   });
 
   // Variant management drawer state
@@ -103,12 +231,24 @@ export default function AdminPortalPage() {
     availableStock: '100',
   });
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [affiliateLinkSearch, setAffiliateLinkSearch] = useState('');
 
 
 
   // Notification Toast State
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     useToastStore.getState().showToast(message, type);
+  };
+
+  const copyProductLink = (slug: string) => {
+    const refCode = profile?.referralCode || '';
+    const link = `${typeof window !== 'undefined' ? window.location.origin.replace('3002', '3000') : 'http://localhost:3000'}/?ref=${refCode}&product=${slug}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedSlug(slug);
+      showToast('Product affiliate link copied!', 'success');
+      setTimeout(() => setCopiedSlug(null), 2500);
+    });
   };
 
   // Sidebar Width & Collapsible states
@@ -145,11 +285,12 @@ export default function AdminPortalPage() {
   async function fetchAdminData() {
     try {
       setLoading(true);
-      const [ordRes, witRes, prodRes, catRes] = await Promise.all([
+      const [ordRes, witRes, prodRes, catRes, affRes] = await Promise.all([
         api.get('/orders/admin'),
         api.get('/affiliates/admin/withdrawals'),
         api.get('/catalog/products?includeInactive=true'),
         api.get('/catalog/categories'),
+        api.get('/affiliates/admin/users'),
       ]);
 
       if (ordRes.data?.success) {
@@ -164,6 +305,9 @@ export default function AdminPortalPage() {
       if (catRes.data?.success) {
         setCategories(catRes.data.data);
       }
+      if (affRes.data?.success) {
+        setAffiliates(affRes.data.data);
+      }
     } catch (e: any) {
       console.error('Error fetching admin data:', e);
       showToast('Could not fetch administrative operations ledger queues.', 'error');
@@ -171,6 +315,39 @@ export default function AdminPortalPage() {
       setLoading(false);
     }
   };
+
+  // Fetch public product catalog (used by affiliate users who don't have admin access)
+  async function fetchCatalogProducts() {
+    try {
+      setProductsLoading(true);
+      const res = await api.get('/catalog/products', { params: { limit: 100 } });
+      if (res.data?.success) {
+        const items = res.data.data?.items || [];
+        setProducts(items);
+      }
+    } catch (e: any) {
+      console.error('Error fetching catalog products:', e);
+      showToast('Could not load product catalog.', 'error');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  async function toggleAffiliateStatus(id: string, currentStatus: boolean) {
+    try {
+      setAffiliatesLoading(true);
+      const res = await api.patch(`/affiliates/admin/users/${id}/status`, { isActive: !currentStatus });
+      if (res.data?.success) {
+        showToast(res.data.message || 'Affiliate status updated successfully.', 'success');
+        await fetchAdminData();
+      }
+    } catch (e: any) {
+      console.error('Error toggling affiliate status:', e);
+      showToast(e.response?.data?.error?.message || 'Could not update affiliate status.', 'error');
+    } finally {
+      setAffiliatesLoading(false);
+    }
+  }
 
   // Auth Submit Handlers
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -265,6 +442,7 @@ export default function AdminPortalPage() {
       price: '',
       discount: '0',
       initialStock: '100',
+      commissionPercentage: '5.0',
     });
     setIsProductDrawerOpen(true);
   };
@@ -289,6 +467,7 @@ export default function AdminPortalPage() {
       price: '',
       discount: '0',
       initialStock: '100',
+      commissionPercentage: String(product.commissionPercentage || '5.0'),
     });
     setIsProductDrawerOpen(true);
   };
@@ -315,6 +494,7 @@ export default function AdminPortalPage() {
           seoTitle: productForm.seoTitle,
           seoDesc: productForm.seoDesc,
           isActive: productForm.isActive,
+          commissionPercentage: Number(productForm.commissionPercentage),
         });
         if (res.data?.success) {
           showToast('Product details updated successfully!', 'success');
@@ -336,6 +516,7 @@ export default function AdminPortalPage() {
           seoTitle: productForm.seoTitle,
           seoDesc: productForm.seoDesc,
           isActive: productForm.isActive,
+          commissionPercentage: Number(productForm.commissionPercentage),
         });
 
         if (prodRes.data?.success && prodRes.data?.data?.id) {
@@ -511,6 +692,8 @@ export default function AdminPortalPage() {
         setActiveSubTab('overview');
       } else if (user.role === 'AFFILIATE') {
         fetchAffiliateProfile();
+        fetchCatalogProducts();
+        setLoading(false); // admin loading not applicable for affiliate users
         setActiveSubTab('overview');
       }
     }
@@ -812,11 +995,25 @@ export default function AdminPortalPage() {
                 className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'payouts' ? 'ops-nav-item-active' : ''}`}
                 title={isSidebarCollapsed ? "Affiliate Payouts Queue" : undefined}
               >
-                <Users className="w-4 h-4 shrink-0" />
+                <Landmark className="w-4 h-4 shrink-0" />
                 {!isSidebarCollapsed && <span className="animate-fadeIn">Payouts Queue</span>}
                 {withdrawals.filter(w => w.status === 'PENDING').length > 0 && !isSidebarCollapsed && (
                   <span className="ml-auto bg-amber-50 text-amber-700 border border-amber-250/50 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md animate-fadeIn">
                     {withdrawals.filter(w => w.status === 'PENDING').length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setActiveSubTab('users'); setIsMobileMenuOpen(false); }}
+                className={`ops-nav-item flex items-center ${isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-3'} py-2.5 text-xs font-extrabold rounded-lg cursor-pointer ${activeSubTab === 'users' ? 'ops-nav-item-active' : ''}`}
+                title={isSidebarCollapsed ? "User Management" : undefined}
+              >
+                <Users className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-fadeIn">User Management</span>}
+                {affiliates.length > 0 && !isSidebarCollapsed && (
+                  <span className="ml-auto bg-slate-100 text-slate-700 border border-slate-200 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-md animate-fadeIn">
+                    {affiliates.length}
                   </span>
                 )}
               </button>
@@ -1076,55 +1273,70 @@ export default function AdminPortalPage() {
 
                 <div className="flex gap-6 items-start w-full relative">
                   <div className={`transition-all duration-300 ${selectedOrder ? 'w-2/3' : 'w-full'} overflow-x-auto min-h-[250px]`}>
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                          <th className="pb-3 pr-2">Reference</th>
-                          <th className="pb-3 pr-2">Buyer details</th>
-                          <th className="pb-3 pr-2">District</th>
-                          <th className="pb-3 pr-2">Total Amount</th>
-                          <th className="pb-3 pr-2">Gateway</th>
-                          <th className="pb-3 pr-2">Status</th>
-                          <th className="pb-3 text-right">Operational Workflow</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredOrders.map((order) => (
-                          <tr key={order.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                            <td className="py-4 font-mono font-black text-slate-400 pr-2">{order.id.substring(0, 8).toUpperCase()}</td>
-                            <td className="py-4 pr-2">
+                    {(() => {
+                      const orderColumns: ColumnDef<any>[] = [
+                        {
+                          header: 'Reference',
+                          render: (order) => (
+                            <span className="font-mono font-black text-slate-450">
+                              {order.id.substring(0, 8).toUpperCase()}
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Buyer details',
+                          render: (order) => (
+                            <div>
                               <p className="font-extrabold text-slate-800">{order.customerName || order.user?.fullName || 'Guest'}</p>
                               <p className="text-[10px] text-slate-400 mt-0.5">{order.customerEmail || order.user?.email || order.customerPhone}</p>
-                            </td>
-                            <td className="py-4 pr-2 font-semibold text-slate-500">📍 {order.district}</td>
-                            <td className="py-4 pr-2 font-extrabold text-emerald-600">{order.totalAmount} BDT</td>
-                            <td className="py-4 pr-2">
-                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                                order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
-                              }`}>
-                                {order.payment?.gateway}
-                              </span>
-                            </td>
-                            <td className="py-4 pr-2">
-                              <select
-                                value={order.status}
-                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold uppercase border cursor-pointer transition focus:outline-none shadow-sm ${
-                                  order.status === 'DELIVERED' ? 'bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/50' :
-                                  order.status === 'SHIPPED' ? 'bg-sky-50 border-sky-200/60 text-sky-700 hover:bg-sky-100/50' :
-                                  order.status === 'CANCELLED' ? 'bg-red-50 border-red-200/60 text-red-700 hover:bg-red-100/50' :
-                                  order.status === 'CONFIRMED' ? 'bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100/50' :
-                                  'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100/50'
-                                }`}
-                              >
-                                <option value="PENDING" className="bg-white text-slate-800">Pending</option>
-                                <option value="CONFIRMED" className="bg-white text-slate-800">Confirmed</option>
-                                <option value="SHIPPED" className="bg-white text-slate-800">Shipped</option>
-                                <option value="DELIVERED" className="bg-white text-slate-800">Delivered</option>
-                                <option value="CANCELLED" className="bg-white text-slate-800">Cancelled</option>
-                              </select>
-                            </td>
-                            <td className="py-4 text-right flex justify-end gap-1.5 items-center">
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'District',
+                          render: (order) => <span className="font-semibold text-slate-500">📍 {order.district}</span>,
+                        },
+                        {
+                          header: 'Total Amount',
+                          render: (order) => <span className="font-extrabold text-emerald-600">{order.totalAmount} BDT</span>,
+                        },
+                        {
+                          header: 'Gateway',
+                          render: (order) => (
+                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                              order.payment?.gateway === 'COD' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-sky-50 text-sky-600 border border-sky-200/50'
+                            }`}>
+                              {order.payment?.gateway}
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Status',
+                          render: (order) => (
+                            <select
+                              value={order.status}
+                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold uppercase border cursor-pointer transition focus:outline-none shadow-sm ${
+                                order.status === 'DELIVERED' ? 'bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/50' :
+                                order.status === 'SHIPPED' ? 'bg-sky-50 border-sky-200/60 text-sky-700 hover:bg-sky-100/50' :
+                                order.status === 'CANCELLED' ? 'bg-red-50 border-red-200/60 text-red-700 hover:bg-red-100/50' :
+                                order.status === 'CONFIRMED' ? 'bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100/50' :
+                                'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100/50'
+                              }`}
+                            >
+                              <option value="PENDING" className="bg-white text-slate-800">Pending</option>
+                              <option value="CONFIRMED" className="bg-white text-slate-800">Confirmed</option>
+                              <option value="SHIPPED" className="bg-white text-slate-800">Shipped</option>
+                              <option value="DELIVERED" className="bg-white text-slate-800">Delivered</option>
+                              <option value="CANCELLED" className="bg-white text-slate-800">Cancelled</option>
+                            </select>
+                          ),
+                        },
+                        {
+                          header: 'Operational Workflow',
+                          align: 'right',
+                          render: (order) => (
+                            <div className="flex justify-end gap-1.5 items-center">
                               <button 
                                 onClick={() => setSelectedOrder(order)}
                                 title="View Details"
@@ -1139,11 +1351,20 @@ export default function AdminPortalPage() {
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          ),
+                        },
+                      ];
+
+                      return (
+                        <PaginatedTable
+                          data={filteredOrders}
+                          columns={orderColumns}
+                          pageSize={10}
+                          emptyMessage="No seasonal orders checkout records match query filters."
+                        />
+                      );
+                    })()}
                   </div>
 
                   {selectedOrder && (
@@ -1333,7 +1554,7 @@ export default function AdminPortalPage() {
                       >
                         <option value="ALL">All Districts</option>
                         <option value="Rajshahi">Rajshahi</option>
-                        <option value="Chapainawabganj">Chapainawabganj</option>
+                        <option value="Naogaon">Naogaon</option>
                         <option value="Satkhira">Satkhira</option>
                         <option value="Dinajpur">Dinajpur</option>
                         <option value="Rangpur">Rangpur</option>
@@ -1358,124 +1579,140 @@ export default function AdminPortalPage() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto min-h-[300px]">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                          <th className="pb-3 pr-2">Fruit Thumbnail</th>
-                          <th className="pb-3 pr-2">Details</th>
-                          <th className="pb-3 pr-2">Category / Origin</th>
-                          <th className="pb-3 pr-2">Sweetness / Organic</th>
-                          <th className="pb-3 pr-2">Live Status</th>
-                          <th className="pb-3 pr-2">Variants Price</th>
-                          <th className="pb-3 text-right">Operational Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {products
-                          .filter(p => {
-                            const matchSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.description.toLowerCase().includes(productSearch.toLowerCase());
-                            const matchCat = categoryFilter === 'ALL' || p.category?.slug === categoryFilter;
-                            const matchDist = districtFilterCatalog === 'ALL' || p.originDistrict?.toLowerCase() === districtFilterCatalog.toLowerCase();
-                            const matchAct = activeStatusFilter === 'ALL' || (activeStatusFilter === 'ACTIVE' ? p.isActive : !p.isActive);
-                            return matchSearch && matchCat && matchDist && matchAct;
-                          })
-                          .map(product => {
+                    {(() => {
+                      const filteredProducts = products.filter(p => {
+                        const matchSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.description.toLowerCase().includes(productSearch.toLowerCase());
+                        const matchCat = categoryFilter === 'ALL' || p.category?.slug === categoryFilter;
+                        const matchDist = districtFilterCatalog === 'ALL' || p.originDistrict?.toLowerCase() === districtFilterCatalog.toLowerCase();
+                        const matchAct = activeStatusFilter === 'ALL' || (activeStatusFilter === 'ACTIVE' ? p.isActive : !p.isActive);
+                        return matchSearch && matchCat && matchDist && matchAct;
+                      });
+
+                      const productColumns: ColumnDef<any>[] = [
+                        {
+                          header: 'Fruit Thumbnail',
+                          render: (product) => {
                             const imgUrl = Array.isArray(product.imageUrl) ? product.imageUrl[0] : product.imageUrl;
-                            
-                            // Calculate Price Range
+                            return (
+                              <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/60 overflow-hidden flex items-center justify-center relative shadow-sm">
+                                {imgUrl ? (
+                                  <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-xl">🥭</span>
+                                )}
+                              </div>
+                            );
+                          },
+                        },
+                        {
+                          header: 'Details',
+                          render: (product) => (
+                            <div>
+                              <div className="font-extrabold text-slate-800">{product.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">slug: {product.slug}</div>
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'Category / Origin',
+                          render: (product) => (
+                            <div>
+                              <span className="bg-slate-100 text-slate-655 border border-slate-200/50 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                {product.category?.name || 'Uncategorized'}
+                              </span>
+                              <div className="text-[10px] text-slate-400 font-bold mt-1">📍 {product.originDistrict}</div>
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'Sweetness / Organic',
+                          render: (product) => (
+                            <div>
+                              <div className="flex gap-0.5 items-center">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <Star key={star} className={`w-3 h-3 ${star <= product.sweetness ? 'text-amber-500 fill-amber-500' : 'text-slate-200'}`} />
+                                ))}
+                              </div>
+                              <div className="mt-1">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                  product.isOrganic ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                }`}>
+                                  {product.isOrganic ? 'Organic 🌿' : 'Standard'}
+                                </span>
+                              </div>
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'Live Status',
+                          render: (product) => (
+                            <button
+                              onClick={() => toggleProductActive(product)}
+                              className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase transition cursor-pointer border ${
+                                product.isActive 
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200/40 hover:bg-emerald-100' 
+                                  : 'bg-rose-50 text-rose-600 border-rose-200/40 hover:bg-rose-100'
+                              }`}
+                            >
+                              {product.isActive ? 'Active' : 'Inactive'}
+                            </button>
+                          ),
+                        },
+                        {
+                          header: 'Variants Price',
+                          render: (product) => {
                             const prices = product.variants?.map((v: any) => Number(v.price)) || [];
                             const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
                             const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
                             const priceRange = minPrice === maxPrice ? `${minPrice} BDT` : `${minPrice} - ${maxPrice} BDT`;
-                            
                             return (
-                              <tr key={product.id} className="hover:bg-slate-50/50 transition">
-                                <td className="py-4 pr-2">
-                                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/60 overflow-hidden flex items-center justify-center relative shadow-sm">
-                                    {imgUrl ? (
-                                      <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="text-xl">🥭</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-4 pr-2">
-                                  <div className="font-extrabold text-slate-800">{product.name}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">slug: {product.slug}</div>
-                                </td>
-                                <td className="py-4 pr-2">
-                                  <span className="bg-slate-100 text-slate-655 border border-slate-200/50 px-2 py-0.5 rounded text-[10px] font-black uppercase">
-                                    {product.category?.name || 'Uncategorized'}
-                                  </span>
-                                  <div className="text-[10px] text-slate-400 font-bold mt-1">📍 {product.originDistrict}</div>
-                                </td>
-                                <td className="py-4 pr-2">
-                                  <div className="flex gap-0.5 items-center">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                      <Star key={star} className={`w-3 h-3 ${star <= product.sweetness ? 'text-amber-500 fill-amber-500' : 'text-slate-200'}`} />
-                                    ))}
-                                  </div>
-                                  <div className="mt-1">
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                                      product.isOrganic ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-slate-100 text-slate-500 border border-slate-200'
-                                    }`}>
-                                      {product.isOrganic ? 'Organic 🌿' : 'Standard'}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-4 pr-2">
-                                  <button
-                                    onClick={() => toggleProductActive(product)}
-                                    className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase transition cursor-pointer border ${
-                                      product.isActive 
-                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200/40 hover:bg-emerald-100' 
-                                        : 'bg-rose-50 text-rose-600 border-rose-200/40 hover:bg-rose-100'
-                                    }`}
-                                  >
-                                    {product.isActive ? 'Active' : 'Inactive'}
-                                  </button>
-                                </td>
-                                <td className="py-4 pr-2">
-                                  <div className="font-extrabold text-slate-800">{priceRange}</div>
-                                  <div className="text-[9px] text-slate-400 font-semibold mt-0.5">({product.variants?.length || 0} variants)</div>
-                                </td>
-                                <td className="py-4 text-right flex justify-end gap-1.5 items-center">
-                                  <button
-                                    onClick={() => openVariantManagement(product)}
-                                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer flex items-center gap-1 shadow-sm"
-                                    title="Manage Variants & Inventory Stock"
-                                  >
-                                    <Package className="w-3.5 h-3.5 text-sky-500" /> Variants ({product.variants?.length || 0})
-                                  </button>
-                                  <button
-                                    onClick={() => openEditProduct(product)}
-                                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
-                                    title="Edit details"
-                                  >
-                                    <Edit className="w-3.5 h-3.5 text-amber-500" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteProduct(product.id)}
-                                    className="bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-350 text-rose-600 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
-                                    title="Archive Variety"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </td>
-                              </tr>
+                              <div>
+                                <div className="font-extrabold text-slate-800">{priceRange}</div>
+                                <div className="text-[9px] text-slate-400 font-semibold mt-0.5">({product.variants?.length || 0} variants)</div>
+                              </div>
                             );
-                          })}
-                        {products.length === 0 && (
-                          <tr>
-                            <td colSpan={7} className="text-center py-16 text-slate-400 font-extrabold uppercase tracking-wider text-xs">
-                              No products published in seasonal catalog list.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          },
+                        },
+                        {
+                          header: 'Operational Actions',
+                          align: 'right',
+                          render: (product) => (
+                            <div className="flex justify-end gap-1.5 items-center">
+                              <button
+                                onClick={() => openVariantManagement(product)}
+                                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-xl font-black text-[10px] transition cursor-pointer flex items-center gap-1 shadow-sm"
+                                title="Manage Variants & Inventory Stock"
+                              >
+                                <Package className="w-3.5 h-3.5 text-sky-500" /> Variants ({product.variants?.length || 0})
+                              </button>
+                              <button
+                                onClick={() => openEditProduct(product)}
+                                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
+                                title="Edit details"
+                              >
+                                <Edit className="w-3.5 h-3.5 text-amber-500" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-355 text-rose-600 p-1.5 rounded-xl transition cursor-pointer shadow-sm"
+                                title="Archive Variety"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ),
+                        },
+                      ];
+
+                      return (
+                        <PaginatedTable
+                          data={filteredProducts}
+                          columns={productColumns}
+                          pageSize={10}
+                          emptyMessage="No products published in seasonal catalog list."
+                        />
+                      );
+                    })()}
                 </div>
 
                 {/* DRAWER 1: CREATE / EDIT PRODUCT */}
@@ -1551,11 +1788,26 @@ export default function AdminPortalPage() {
                               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-800 font-extrabold cursor-pointer"
                             >
                               <option value="Rajshahi">Rajshahi</option>
-                              <option value="Chapainawabganj">Chapainawabganj</option>
+                              <option value="Naogaon">Naogaon</option>
                               <option value="Satkhira">Satkhira</option>
                               <option value="Dinajpur">Dinajpur</option>
                               <option value="Rangpur">Rangpur</option>
                             </select>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Affiliate Commission (%) *</label>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={productForm.commissionPercentage}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, commissionPercentage: e.target.value }))}
+                              placeholder="e.g. 10"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-bold"
+                            />
                           </div>
                         </div>
 
@@ -2024,73 +2276,84 @@ export default function AdminPortalPage() {
                   <p className="text-xs text-slate-400 font-semibold">Verify cash bank details, audit referring click velocities, and disburse performance wallet balances.</p>
                 </div>
 
-                <div className="overflow-x-auto min-h-[250px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                        <th className="pb-3">Transaction Ref</th>
-                        <th className="pb-3">Affiliate Partner</th>
-                        <th className="pb-3">Wallet Commission</th>
-                        <th className="pb-3">Payout Amount</th>
-                        <th className="pb-3">Gateway Mode</th>
-                        <th className="pb-3">Disbursement Target</th>
-                        <th className="pb-3 text-right">Settlement Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {withdrawals.map((req) => (
-                        <tr key={req.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                          <td className="py-4 font-mono font-extrabold text-slate-400">{req.txRef || `WIT-${req.id.substring(0, 5).toUpperCase()}`}</td>
-                          <td className="py-4">
-                            <p className="font-extrabold text-slate-800">{req.affiliate?.user?.fullName}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Partner Code: {req.affiliate?.referralCode}</p>
-                          </td>
-                          <td className="py-4 font-semibold text-slate-500">{req.affiliate?.walletBalance} BDT</td>
-                          <td className="py-4 font-black text-amber-600">{req.amount} BDT</td>
-                          <td className="py-4 font-black">
+                    {(() => {
+                      const payoutColumns: ColumnDef<any>[] = [
+                        {
+                          header: 'Transaction Ref',
+                          render: (req) => <span className="font-mono font-extrabold text-slate-400">{req.txRef || `WIT-${req.id.substring(0, 5).toUpperCase()}`}</span>,
+                        },
+                        {
+                          header: 'Affiliate Partner',
+                          render: (req) => (
+                            <div>
+                              <p className="font-extrabold text-slate-800">{req.affiliate?.user?.fullName}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Partner Code: {req.affiliate?.referralCode}</p>
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'Wallet Commission',
+                          render: (req) => <span className="font-semibold text-slate-500">{req.affiliate?.walletBalance} BDT</span>,
+                        },
+                        {
+                          header: 'Payout Amount',
+                          render: (req) => <span className="font-black text-amber-600">{req.amount} BDT</span>,
+                        },
+                        {
+                          header: 'Gateway Mode',
+                          render: (req) => (
                             <span className="bg-purple-50 text-purple-600 border border-purple-200/50 font-black uppercase tracking-wider px-2.5 py-0.5 rounded text-[8px]">
                               {req.method}
                             </span>
-                          </td>
-                          <td className="py-4 text-slate-550 font-semibold">{req.notes || req.paymentDetails || 'N/A'}</td>
-                          <td className="py-4 text-right flex justify-end gap-1.5">
-                            {req.status === 'PENDING' ? (
-                              <>
-                                <button 
-                                  onClick={() => processWithdrawal(req.id, 'APPROVED')}
-                                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-sm"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                                </button>
-                                <button 
-                                  onClick={() => processWithdrawal(req.id, 'REJECTED')}
-                                  className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-slate-655 font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-sm"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" /> Decline
-                                </button>
-                              </>
-                            ) : (
-                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide border ${
-                                req.status === 'APPROVED' || req.status === 'PAID' 
-                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' 
-                                  : 'bg-red-50 text-red-600 border-red-200/50'
-                              }`}>
-                                {req.status}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {withdrawals.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="text-center py-12 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                            No affiliate disburse payout requests registered.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                          ),
+                        },
+                        {
+                          header: 'Disbursement Target',
+                          render: (req) => <span className="text-slate-550 font-semibold">{req.notes || req.paymentDetails || 'N/A'}</span>,
+                        },
+                        {
+                          header: 'Settlement Actions',
+                          align: 'right',
+                          render: (req) => (
+                            <div className="flex justify-end gap-1.5">
+                              {req.status === 'PENDING' ? (
+                                <>
+                                  <button 
+                                    onClick={() => processWithdrawal(req.id, 'APPROVED')}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-sm"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                  </button>
+                                  <button 
+                                    onClick={() => processWithdrawal(req.id, 'REJECTED')}
+                                    className="bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-655 text-slate-655 font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-sm"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" /> Decline
+                                  </button>
+                                </>
+                              ) : (
+                                <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide border ${
+                                  req.status === 'APPROVED' || req.status === 'PAID' 
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' 
+                                    : 'bg-red-50 text-red-600 border-red-200/50'
+                                }`}>
+                                  {req.status}
+                                </span>
+                              )}
+                            </div>
+                          ),
+                        },
+                      ];
+
+                      return (
+                        <PaginatedTable
+                          data={withdrawals}
+                          columns={payoutColumns}
+                          pageSize={10}
+                          emptyMessage="No affiliate disburse payout requests registered."
+                        />
+                      );
+                    })()}
               </div>
             )}
 
@@ -2150,6 +2413,162 @@ export default function AdminPortalPage() {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* SUB-TAB: AFFILIATE USER MANAGEMENT */}
+            {activeSubTab === 'users' && (
+              <div className="flex flex-col gap-6">
+                {/* Search Bar */}
+                <div className="ops-panel p-4 rounded-2xl shadow flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <div className="relative w-full sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search affiliates..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold outline-none transition"
+                    />
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                    Total Registered Affiliates: <span className="text-emerald-600">{affiliates.length}</span>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="ops-panel rounded-3xl shadow overflow-hidden p-6">
+                  {(() => {
+                    const filteredAffiliates = affiliates.filter(aff => 
+                      aff.user.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
+                      aff.user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+                      aff.referralCode.toLowerCase().includes(userSearch.toLowerCase())
+                    );
+
+                    const affiliateColumns: ColumnDef<any>[] = [
+                      {
+                        header: 'Partner Name / Contact',
+                        className: 'px-4',
+                        render: (aff) => (
+                          <div className="flex flex-col">
+                            <span className="font-extrabold text-slate-800">{aff.user.fullName}</span>
+                            <span className="text-[10px] text-slate-400 font-mono mt-0.5">{aff.user.email}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        header: 'Referral Code',
+                        className: 'px-4',
+                        render: (aff) => (
+                          <span className="font-mono text-xs font-bold text-amber-600">
+                            {aff.referralCode}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Clicks',
+                        className: 'px-4',
+                        align: 'center',
+                        render: (aff) => (
+                          <span className="font-mono font-bold text-slate-600">
+                            {aff.clicksCount}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Wallet Balance',
+                        className: 'px-4',
+                        align: 'right',
+                        render: (aff) => (
+                          <span className="font-mono font-bold text-slate-800">
+                            {aff.walletBalance.toFixed(2)} BDT
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Pending Comm.',
+                        className: 'px-4',
+                        align: 'right',
+                        render: (aff) => (
+                          <span className="font-mono font-bold text-amber-655">
+                            {aff.pendingCommissions.toFixed(2)} BDT
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Approved Comm.',
+                        className: 'px-4',
+                        align: 'right',
+                        render: (aff) => (
+                          <span className="font-mono font-bold text-emerald-600">
+                            {aff.approvedCommissions.toFixed(2)} BDT
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Total Paid Out',
+                        className: 'px-4',
+                        align: 'right',
+                        render: (aff) => (
+                          <span className="font-mono font-bold text-slate-500">
+                            {aff.totalPaidOut.toFixed(2)} BDT
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Status',
+                        className: 'px-4',
+                        align: 'center',
+                        render: (aff) => (
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                            aff.isActive
+                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50'
+                              : 'bg-rose-50 text-rose-650 border border-rose-200/50'
+                          }`}>
+                            {aff.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Joined At',
+                        className: 'px-4',
+                        align: 'center',
+                        render: (aff) => (
+                          <span className="text-[10px] text-slate-455 font-mono">
+                            {new Date(aff.createdAt).toLocaleDateString()}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Actions',
+                        className: 'px-4',
+                        align: 'center',
+                        render: (aff) => (
+                          <button
+                            onClick={() => toggleAffiliateStatus(aff.id, aff.isActive)}
+                            disabled={affiliatesLoading}
+                            className={`px-3 py-1 rounded-xl text-[10px] font-black transition cursor-pointer ${
+                              aff.isActive
+                                ? 'bg-rose-50 hover:bg-rose-100 text-rose-650 border border-rose-200/40'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200/40'
+                            }`}
+                          >
+                            {aff.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        ),
+                      },
+                    ];
+
+                    return (
+                      <PaginatedTable
+                        data={filteredAffiliates}
+                        columns={affiliateColumns}
+                        pageSize={10}
+                        emptyMessage="No affiliate users registered yet."
+                      />
+                    );
+                  })()}
+                </div>
               </div>
             )}
 
@@ -2473,20 +2892,19 @@ export default function AdminPortalPage() {
 
             {/* SUB-TAB: CAMPAIGN LINKS */}
             {activeSubTab === 'links' && (
-              <div className="ops-panel p-6 sm:p-8 rounded-3xl border border-slate-200 bg-white flex flex-col gap-6 shadow-xl max-w-3xl mx-auto w-full">
-                <div>
-                  <h3 className="font-extrabold text-base text-slate-800 mb-1">Referral Campaign Deep-Links</h3>
-                  <p className="text-xs text-slate-400 font-semibold">Generate tracking campaign links for organic mango boxes and share with your networks to collect commission cash.</p>
-                </div>
+              <div className="flex flex-col gap-6 w-full">
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Your Referral Link</label>
+                {/* General referral link */}
+                <div className="ops-panel p-6 rounded-2xl border border-slate-200 bg-white shadow-md">
+                  <h3 className="font-extrabold text-base text-slate-800 mb-1">Your General Referral Link</h3>
+                  <p className="text-xs text-slate-400 font-semibold mb-4">Share this link — commission is earned for any product a visitor buys after clicking it.</p>
                   <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-1 shadow-inner">
                     <input 
                       type="text" 
                       readOnly
                       value={generatedLink}
                       className="flex-grow bg-transparent text-xs px-3 focus:outline-none text-slate-700 font-mono font-bold"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <button 
                       onClick={() => copyToClipboard(generatedLink)}
@@ -2497,11 +2915,153 @@ export default function AdminPortalPage() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl flex gap-3 text-xs text-slate-550 leading-relaxed">
-                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                {/* Product-specific affiliate links */}
+                <div className="ops-panel rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-amber-500" /> Product Affiliate Link Generator
+                      </h3>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">Generate a unique link for each product. Share it to earn that product's commission rate on every sale.</p>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search products..."
+                      value={affiliateLinkSearch}
+                      onChange={(e) => setAffiliateLinkSearch(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-amber-500 transition w-full sm:w-44"
+                    />
+                  </div>
+
+                  <div className="p-6">
+                    {productsLoading ? (
+                      <div className="flex flex-col gap-2 animate-pulse py-8">
+                        <div className="h-6 bg-slate-100 rounded w-full" />
+                        <div className="h-6 bg-slate-100 rounded w-full" />
+                        <div className="h-6 bg-slate-100 rounded w-full" />
+                      </div>
+                    ) : (() => {
+                      const filtered = products.filter(p =>
+                        p.name.toLowerCase().includes(affiliateLinkSearch.toLowerCase()) ||
+                        p.originDistrict?.toLowerCase().includes(affiliateLinkSearch.toLowerCase()) ||
+                        p.category?.name?.toLowerCase().includes(affiliateLinkSearch.toLowerCase())
+                      );
+
+                      const linkColumns: ColumnDef<any>[] = [
+                        {
+                          header: 'Fruit Thumbnail',
+                          render: (p) => {
+                            const imgUrl = Array.isArray(p.imageUrl) ? p.imageUrl[0] : p.imageUrl;
+                            return (
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/60 overflow-hidden flex items-center justify-center relative shadow-sm">
+                                {imgUrl ? (
+                                  <img src={imgUrl} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-lg">🥭</span>
+                                )}
+                              </div>
+                            );
+                          },
+                        },
+                        {
+                          header: 'Product Details',
+                          render: (p) => (
+                            <div>
+                              <p className="font-extrabold text-slate-800 leading-tight">🥭 {p.name}</p>
+                              <p className="text-[9px] text-slate-500 font-medium mt-0.5">
+                                📍 {p.originDistrict} &nbsp;•&nbsp; {p.category?.name || 'Seasonal'}
+                              </p>
+                            </div>
+                          ),
+                        },
+                        {
+                          header: 'Rate',
+                          render: (p) => {
+                            const commPct = Number(p.commissionPercentage || 5.0);
+                            return (
+                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/50 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                {commPct}%
+                              </span>
+                            );
+                          },
+                        },
+                        {
+                          header: 'Est. Earnings',
+                          render: (p) => {
+                            const commPct = Number(p.commissionPercentage || 5.0);
+                            const minPrice = p.variants?.length > 0
+                              ? Math.min(...p.variants.map((v: any) => Number(v.price) - Number(v.discount || 0)))
+                              : null;
+                            return (
+                              <div className="text-[11px] font-bold text-amber-600">
+                                {minPrice !== null ? `~${((minPrice * commPct) / 100).toFixed(0)} BDT/sale` : 'N/A'}
+                              </div>
+                            );
+                          },
+                        },
+                        {
+                          header: 'Affiliate URL',
+                          render: (p) => {
+                            const refCode = profile?.referralCode || '';
+                            const storeUrl = typeof window !== 'undefined' ? window.location.origin.replace('3002', '3000') : 'http://localhost:3000';
+                            const prodLink = `${storeUrl}/?ref=${refCode}&product=${p.slug}`;
+                            return (
+                              <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden max-w-xs">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  value={prodLink}
+                                  className="w-full bg-transparent text-[10px] px-2 py-1.5 focus:outline-none text-slate-500 font-mono cursor-text"
+                                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                                />
+                              </div>
+                            );
+                          },
+                        },
+                        {
+                          header: 'Action',
+                          align: 'right',
+                          render: (p) => {
+                            const isCopied = copiedSlug === p.slug;
+                            return (
+                              <button
+                                onClick={() => copyProductLink(p.slug)}
+                                className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                                  isCopied
+                                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                    : 'bg-amber-500 hover:bg-amber-400 text-white shadow-sm'
+                                }`}
+                              >
+                                {isCopied ? 'Copied!' : 'Copy Link'}
+                              </button>
+                            );
+                          },
+                        },
+                      ];
+
+                      return (
+                        <PaginatedTable
+                          data={filtered}
+                          columns={linkColumns}
+                          pageSize={10}
+                          emptyMessage={affiliateLinkSearch ? `No products match "${affiliateLinkSearch}"` : 'No products in catalog yet.'}
+                        />
+                      );
+                    })()}
+                  </div>
+
+                  {!productsLoading && products.length > 0 && (
+                    <p className="text-[10px] text-slate-400 text-center mt-5 mb-5 font-semibold">
+                      {products.filter(p => p.name.toLowerCase().includes(affiliateLinkSearch.toLowerCase())).length} product(s) shown &nbsp;•&nbsp; Commission credited after order delivery
+                    </p>
+                  )}
+                </div>
+
+                <div className="ops-panel bg-slate-50 p-4 rounded-2xl border border-slate-200 flex gap-3 text-xs text-slate-550 leading-relaxed">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-black text-slate-800 mb-1">Click attribution & cookies policy</p>
-                    <p>When a buyer clicks your deep-link, our platform saves a 30-day tracking cookie. Self-attribution and automated click bot velocities are dynamically dropped by security controls to ensure organic legitimacy.</p>
+                    <p className="font-black text-slate-800 mb-1">How attribution works</p>
+                    <p>When a buyer clicks your product link, the system records your referral code. If they complete an order, the commission is automatically credited to your wallet — no manual entry required.</p>
                   </div>
                 </div>
               </div>
@@ -2582,78 +3142,92 @@ export default function AdminPortalPage() {
                   <p className="text-xs text-slate-400 font-semibold">Track double-entry logs audit-history of all campaigns clicks, pending payouts, and approved settlements.</p>
                 </div>
 
-                <div className="overflow-x-auto min-h-[250px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
-                        <th className="pb-3 pr-2">Transaction Ref</th>
-                        <th className="pb-3 pr-2">Type</th>
-                        <th className="pb-3 pr-2">Details</th>
-                        <th className="pb-3 pr-2">Amount</th>
-                        <th className="pb-3 pr-2">Settlement Date</th>
-                        <th className="pb-3 text-right">Verification Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {/* Withdrawals */}
-                      {profile?.withdrawals?.map((w: any) => (
-                        <tr key={w.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                          <td className="py-3 font-semibold font-mono text-slate-400 pr-2">{w.txRef || `WIT-${w.id.substring(0, 5).toUpperCase()}`}</td>
-                          <td className="py-3 pr-2">
-                            <span className="bg-red-50 text-red-600 border border-red-200/50 font-black uppercase tracking-wider px-2 py-0.5 rounded text-[8px]">
-                              Payout Cashout
+                    {(() => {
+                      const ledgerEntries = [
+                        ...(profile?.withdrawals?.map((w: any) => ({
+                          ...w,
+                          entryType: 'WITHDRAWAL',
+                          sortDate: new Date(w.createdAt),
+                        })) || []),
+                        ...(profile?.commissions?.map((c: any) => ({
+                          ...c,
+                          entryType: 'COMMISSION',
+                          sortDate: new Date(c.createdAt),
+                        })) || []),
+                      ].sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
+
+                      const ledgerColumns: ColumnDef<any>[] = [
+                        {
+                          header: 'Transaction Ref',
+                          render: (item) => (
+                            <span className="font-semibold font-mono text-slate-450">
+                              {item.entryType === 'WITHDRAWAL'
+                                ? (item.txRef || `WIT-${item.id.substring(0, 5).toUpperCase()}`)
+                                : `COM-${item.id.substring(0, 5).toUpperCase()}`
+                              }
                             </span>
-                          </td>
-                          <td className="py-3 text-slate-550 font-semibold pr-2">{w.notes || `Disbursed to ${w.method}`}</td>
-                          <td className="py-3 font-black text-red-600 pr-2">-{w.amount} BDT</td>
-                          <td className="py-3 text-slate-400 font-bold pr-2">{new Date(w.createdAt).toLocaleDateString()}</td>
-                          <td className="py-3 text-right">
+                          ),
+                        },
+                        {
+                          header: 'Type',
+                          render: (item) => (
+                            <span className={`font-black uppercase tracking-wider px-2 py-0.5 rounded text-[8px] border ${
+                              item.entryType === 'WITHDRAWAL'
+                                ? 'bg-rose-50 text-rose-600 border-rose-200/50'
+                                : 'bg-emerald-50 text-emerald-650 border-emerald-200/50'
+                            }`}>
+                              {item.entryType === 'WITHDRAWAL' ? 'Payout Cashout' : 'Commission Earned'}
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Details',
+                          render: (item) => (
+                            <span className="text-slate-550 font-semibold">
+                              {item.notes || (item.entryType === 'WITHDRAWAL' ? `Disbursed to ${item.method}` : `10% commission on purchase ${item.orderId}`)}
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Amount',
+                          render: (item) => (
+                            <span className={`font-black ${item.entryType === 'WITHDRAWAL' ? 'text-rose-600' : 'text-emerald-650'}`}>
+                              {item.entryType === 'WITHDRAWAL' ? '-' : '+'}{item.amount} BDT
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Settlement Date',
+                          render: (item) => (
+                            <span className="text-slate-400 font-bold">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
+                          ),
+                        },
+                        {
+                          header: 'Verification Status',
+                          align: 'right',
+                          render: (item) => (
                             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide border ${
-                              w.status === 'PENDING' ? 'bg-amber-550/10 text-amber-600 border-amber-200/50' :
-                              w.status === 'APPROVED' || w.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' :
+                              item.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-200/50' :
+                              item.status === 'APPROVED' || item.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' :
                               'bg-red-50 text-red-650 border-red-200/50'
                             }`}>
-                              {w.status}
+                              {item.status}
                             </span>
-                          </td>
-                        </tr>
-                      ))}
+                          ),
+                        },
+                      ];
 
-                      {/* Commissions */}
-                      {profile?.commissions?.map((c: any) => (
-                        <tr key={c.id} className="text-slate-655 hover:bg-slate-50/80 transition">
-                          <td className="py-3 font-semibold font-mono text-slate-400 pr-2">COM-{c.id.substring(0, 5).toUpperCase()}</td>
-                          <td className="py-3 pr-2">
-                            <span className="bg-emerald-50 text-emerald-650 border border-emerald-200/50 font-black uppercase tracking-wider px-2 py-0.5 rounded text-[8px]">
-                              Commission Earned
-                            </span>
-                          </td>
-                          <td className="py-3 text-slate-550 font-semibold pr-2">{c.notes || `10% commission on purchase ${c.orderId}`}</td>
-                          <td className="py-3 font-black text-emerald-650 pr-2">+{c.amount} BDT</td>
-                          <td className="py-3 text-slate-400 font-bold pr-2">{new Date(c.createdAt).toLocaleDateString()}</td>
-                          <td className="py-3 text-right">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide border ${
-                              c.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-200/50' :
-                              c.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-650 border-emerald-200/50' :
-                              'bg-red-50 text-red-600 border-red-200/50'
-                            }`}>
-                              {c.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-
-                      {(!profile?.withdrawals || profile?.withdrawals.length === 0) && 
-                       (!profile?.commissions || profile?.commissions.length === 0) && (
-                        <tr>
-                          <td colSpan={6} className="text-center py-12 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                            No wallet settlements or payout transaction logs found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      return (
+                        <PaginatedTable
+                          data={ledgerEntries}
+                          columns={ledgerColumns}
+                          pageSize={10}
+                          emptyMessage="No wallet settlements or payout transaction logs found."
+                        />
+                      );
+                    })()}
               </div>
             )}
 
