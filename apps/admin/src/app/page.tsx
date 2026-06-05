@@ -33,6 +33,7 @@ export default function AdminPortalPage() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const {
     profile,
     loading: affiliateLoading,
@@ -88,6 +89,7 @@ export default function AdminPortalPage() {
     price: '',
     discount: '0',
     initialStock: '100',
+    commissionPercentage: '5.0',
   });
 
   // Variant management drawer state
@@ -103,12 +105,24 @@ export default function AdminPortalPage() {
     availableStock: '100',
   });
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [affiliateLinkSearch, setAffiliateLinkSearch] = useState('');
 
 
 
   // Notification Toast State
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     useToastStore.getState().showToast(message, type);
+  };
+
+  const copyProductLink = (slug: string) => {
+    const refCode = profile?.referralCode || '';
+    const link = `${typeof window !== 'undefined' ? window.location.origin.replace('3002', '3000') : 'http://localhost:3000'}/?ref=${refCode}&product=${slug}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedSlug(slug);
+      showToast('Product affiliate link copied!', 'success');
+      setTimeout(() => setCopiedSlug(null), 2500);
+    });
   };
 
   // Sidebar Width & Collapsible states
@@ -169,6 +183,23 @@ export default function AdminPortalPage() {
       showToast('Could not fetch administrative operations ledger queues.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch public product catalog (used by affiliate users who don't have admin access)
+  async function fetchCatalogProducts() {
+    try {
+      setProductsLoading(true);
+      const res = await api.get('/catalog/products', { params: { limit: 100 } });
+      if (res.data?.success) {
+        const items = res.data.data?.items || [];
+        setProducts(items);
+      }
+    } catch (e: any) {
+      console.error('Error fetching catalog products:', e);
+      showToast('Could not load product catalog.', 'error');
+    } finally {
+      setProductsLoading(false);
     }
   };
 
@@ -265,6 +296,7 @@ export default function AdminPortalPage() {
       price: '',
       discount: '0',
       initialStock: '100',
+      commissionPercentage: '5.0',
     });
     setIsProductDrawerOpen(true);
   };
@@ -289,6 +321,7 @@ export default function AdminPortalPage() {
       price: '',
       discount: '0',
       initialStock: '100',
+      commissionPercentage: String(product.commissionPercentage || '5.0'),
     });
     setIsProductDrawerOpen(true);
   };
@@ -315,6 +348,7 @@ export default function AdminPortalPage() {
           seoTitle: productForm.seoTitle,
           seoDesc: productForm.seoDesc,
           isActive: productForm.isActive,
+          commissionPercentage: Number(productForm.commissionPercentage),
         });
         if (res.data?.success) {
           showToast('Product details updated successfully!', 'success');
@@ -336,6 +370,7 @@ export default function AdminPortalPage() {
           seoTitle: productForm.seoTitle,
           seoDesc: productForm.seoDesc,
           isActive: productForm.isActive,
+          commissionPercentage: Number(productForm.commissionPercentage),
         });
 
         if (prodRes.data?.success && prodRes.data?.data?.id) {
@@ -511,6 +546,8 @@ export default function AdminPortalPage() {
         setActiveSubTab('overview');
       } else if (user.role === 'AFFILIATE') {
         fetchAffiliateProfile();
+        fetchCatalogProducts();
+        setLoading(false); // admin loading not applicable for affiliate users
         setActiveSubTab('overview');
       }
     }
@@ -1557,6 +1594,21 @@ export default function AdminPortalPage() {
                               <option value="Rangpur">Rangpur</option>
                             </select>
                           </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Affiliate Commission (%) *</label>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={productForm.commissionPercentage}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, commissionPercentage: e.target.value }))}
+                              placeholder="e.g. 10"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-700 font-bold"
+                            />
+                          </div>
                         </div>
 
                         <div className="flex flex-col gap-1.5">
@@ -2473,20 +2525,19 @@ export default function AdminPortalPage() {
 
             {/* SUB-TAB: CAMPAIGN LINKS */}
             {activeSubTab === 'links' && (
-              <div className="ops-panel p-6 sm:p-8 rounded-3xl border border-slate-200 bg-white flex flex-col gap-6 shadow-xl max-w-3xl mx-auto w-full">
-                <div>
-                  <h3 className="font-extrabold text-base text-slate-800 mb-1">Referral Campaign Deep-Links</h3>
-                  <p className="text-xs text-slate-400 font-semibold">Generate tracking campaign links for organic mango boxes and share with your networks to collect commission cash.</p>
-                </div>
+              <div className="flex flex-col gap-6 w-full">
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Your Referral Link</label>
+                {/* General referral link */}
+                <div className="ops-panel p-6 rounded-2xl border border-slate-200 bg-white shadow-md">
+                  <h3 className="font-extrabold text-base text-slate-800 mb-1">Your General Referral Link</h3>
+                  <p className="text-xs text-slate-400 font-semibold mb-4">Share this link — commission is earned for any product a visitor buys after clicking it.</p>
                   <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-1 shadow-inner">
                     <input 
                       type="text" 
                       readOnly
                       value={generatedLink}
                       className="flex-grow bg-transparent text-xs px-3 focus:outline-none text-slate-700 font-mono font-bold"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <button 
                       onClick={() => copyToClipboard(generatedLink)}
@@ -2497,11 +2548,131 @@ export default function AdminPortalPage() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl flex gap-3 text-xs text-slate-550 leading-relaxed">
-                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                {/* Product-specific affiliate links */}
+                <div className="ops-panel rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-amber-500" /> Product Affiliate Link Generator
+                      </h3>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">Generate a unique link for each product. Share it to earn that product's commission rate on every sale.</p>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search products..."
+                      value={affiliateLinkSearch}
+                      onChange={(e) => setAffiliateLinkSearch(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-amber-500 transition w-full sm:w-44"
+                    />
+                  </div>
+
+                  <div className="p-6">
+                    {productsLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="bg-slate-50 rounded-2xl p-4 animate-pulse flex flex-col gap-3">
+                            <div className="h-4 bg-slate-200 rounded w-3/4" />
+                            <div className="h-3 bg-slate-200 rounded w-1/2" />
+                            <div className="h-8 bg-slate-200 rounded w-full mt-2" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (() => {
+                      const filtered = products.filter(p =>
+                        p.name.toLowerCase().includes(affiliateLinkSearch.toLowerCase()) ||
+                        p.originDistrict?.toLowerCase().includes(affiliateLinkSearch.toLowerCase()) ||
+                        p.category?.name?.toLowerCase().includes(affiliateLinkSearch.toLowerCase())
+                      );
+                      return filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                          <Package className="w-10 h-10 text-slate-300" />
+                          <p className="text-sm font-semibold">{affiliateLinkSearch ? `No products match "${affiliateLinkSearch}"` : 'No products in catalog yet.'}</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {filtered.map((p) => {
+                            const refCode = profile?.referralCode || '';
+                            const storeUrl = typeof window !== 'undefined' ? window.location.origin.replace('3002', '3000') : 'http://localhost:3000';
+                            const prodLink = `${storeUrl}/?ref=${refCode}&product=${p.slug}`;
+                            const isCopied = copiedSlug === p.slug;
+                            const commPct = Number(p.commissionPercentage || 5.0);
+                            const minPrice = p.variants?.length > 0
+                              ? Math.min(...p.variants.map((v: any) => Number(v.price) - Number(v.discount || 0)))
+                              : null;
+
+                            return (
+                              <div
+                                key={p.id}
+                                className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 hover:border-amber-300 hover:shadow-sm transition-all duration-200"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex flex-col gap-0.5">
+                                    <p className="text-sm font-bold text-slate-800 leading-tight">🥭 {p.name}</p>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                      📍 {p.originDistrict} &nbsp;•&nbsp; {p.category?.name || 'Seasonal'}
+                                    </p>
+                                    {minPrice !== null && (
+                                      <p className="text-[10px] text-slate-400">
+                                        From <span className="font-bold text-slate-600">{minPrice} BDT</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg text-[11px] font-black whitespace-nowrap">
+                                      {commPct}% earn
+                                    </span>
+                                    {minPrice !== null && (
+                                      <span className="text-[10px] text-amber-600 font-semibold">
+                                        ~{((minPrice * commPct) / 100).toFixed(0)} BDT/sale
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={prodLink}
+                                    className="flex-grow bg-transparent text-[10px] px-3 py-2 focus:outline-none text-slate-500 font-mono cursor-text"
+                                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                                  />
+                                </div>
+
+                                <button
+                                  onClick={() => copyProductLink(p.slug)}
+                                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                                    isCopied
+                                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                      : 'bg-amber-500 hover:bg-amber-400 text-white shadow-sm'
+                                  }`}
+                                >
+                                  {isCopied ? (
+                                    <><CheckCircle2 className="w-3.5 h-3.5" /> Copied!</>
+                                  ) : (
+                                    <><Copy className="w-3.5 h-3.5" /> Copy Affiliate Link</>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {!productsLoading && products.length > 0 && (
+                      <p className="text-[10px] text-slate-400 text-center mt-5 font-semibold">
+                        {products.filter(p => p.name.toLowerCase().includes(affiliateLinkSearch.toLowerCase())).length} product(s) shown &nbsp;•&nbsp; Commission credited after order delivery
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="ops-panel bg-slate-50 p-4 rounded-2xl border border-slate-200 flex gap-3 text-xs text-slate-550 leading-relaxed">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-black text-slate-800 mb-1">Click attribution & cookies policy</p>
-                    <p>When a buyer clicks your deep-link, our platform saves a 30-day tracking cookie. Self-attribution and automated click bot velocities are dynamically dropped by security controls to ensure organic legitimacy.</p>
+                    <p className="font-black text-slate-800 mb-1">How attribution works</p>
+                    <p>When a buyer clicks your product link, the system records your referral code. If they complete an order, the commission is automatically credited to your wallet — no manual entry required.</p>
                   </div>
                 </div>
               </div>

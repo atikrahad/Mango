@@ -116,7 +116,7 @@ export class CatalogService {
   }
 
   async createProduct(body: any) {
-    const { categoryId, name, slug, description, sweetness, isOrganic, originDistrict, imageUrl, seoTitle, seoDesc } = body;
+    const { categoryId, name, slug, description, sweetness, isOrganic, originDistrict, imageUrl, seoTitle, seoDesc, commissionPercentage } = body;
     
     // Check if slug unique
     const existing = await this.prisma.product.findFirst({
@@ -141,6 +141,7 @@ export class CatalogService {
         imageUrl: dbImageUrl,
         seoTitle,
         seoDesc,
+        commissionPercentage: commissionPercentage !== undefined ? Number(commissionPercentage) : undefined,
       },
     });
 
@@ -151,7 +152,7 @@ export class CatalogService {
   }
 
   async updateProduct(id: string, body: any) {
-    const { categoryId, name, slug, description, sweetness, isOrganic, originDistrict, imageUrl, seoTitle, seoDesc, isActive } = body;
+    const { categoryId, name, slug, description, sweetness, isOrganic, originDistrict, imageUrl, seoTitle, seoDesc, isActive, commissionPercentage } = body;
 
     // Check if product exists and isn't deleted
     const product = await this.prisma.product.findFirst({
@@ -187,6 +188,7 @@ export class CatalogService {
     if (seoTitle !== undefined) data.seoTitle = seoTitle;
     if (seoDesc !== undefined) data.seoDesc = seoDesc;
     if (isActive !== undefined) data.isActive = isActive === true || isActive === 'true';
+    if (commissionPercentage !== undefined) data.commissionPercentage = Number(commissionPercentage);
 
     const updatedProduct = await this.prisma.product.update({
       where: { id },

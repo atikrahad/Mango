@@ -196,7 +196,7 @@ export default function CatalogPage() {
     fetchCatalog();
   }, [search, selectedDistrict, selectedSweetness, selectedOrganic, selectedCategorySlug]);
 
-  // Hook for capturing affiliate code from url
+  // Hook for capturing affiliate code and product slug from url
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -204,6 +204,11 @@ export default function CatalogPage() {
       if (ref) {
         setReferralCode(ref);
         showToast(`Orchard Ambassador referral code applied: ${ref}`, 'info');
+      }
+
+      const productParam = urlParams.get('product') || urlParams.get('p');
+      if (productParam) {
+        setSelectedProductSlug(productParam);
       }
     }
   }, []);
