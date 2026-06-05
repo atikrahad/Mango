@@ -255,4 +255,82 @@ export class AffiliateService {
       data: updated,
     };
   }
+
+  async getAdminAffiliates() {
+    const affiliates = await this.prisma.affiliate.findMany({
+      include: {
+        user: true,
+        clicks: true,
+        commissions: true,
+        withdrawals: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const data = affiliates.map(aff => {
+      const clicksCount = aff.clicks.length;
+      
+      const pendingCommissions = aff.commissions
+        .filter(c => c.status === CommissionStatus.PENDING)
+        .reduce((sum, c) => sum + Number(c.amount), 0);
+
+      const approvedCommissions = aff.commissions
+        .filter(c => c.status === CommissionStatus.APPROVED)
+        .reduce((sum, c) => sum + Number(c.amount), 0);
+
+      const totalPaidOut = aff.withdrawals
+        .filter(w => w.status === PayoutStatus.PAID)
+        .reduce((sum, w) => sum + Number(w.amount), 0);
+
+      return {
+        id: aff.id,
+        referralCode: aff.referralCode,
+        walletBalance: Number(aff.walletBalance),
+        isActive: aff.isActive,
+        createdAt: aff.createdAt,
+        user: {
+          id: aff.user.id,
+          fullName: aff.user.fullName,
+          email: aff.user.email,
+        },
+        clicksCount,
+        pendingCommissions,
+        approvedCommissions,
+        totalPaidOut,
+      };
+    });
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  async toggleAffiliateStatus(id: string, isActive: boolean) {
+    const affiliate = await this.prisma.affiliate.findUnique({
+      where: { id },
+    });
+
+    if (!affiliate) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'COUPON_INVALID',
+          message: 'Affiliate profile not found.',
+        },
+      });
+    }
+
+    const updated = await this.prisma.affiliate.update({
+      where: { id },
+      data: { isActive },
+    });
+
+    return {
+      success: true,
+      message: `Affiliate profile has been ${isActive ? 'activated' : 'deactivated'}.`,
+      data: updated,
+    };
+  }
 }
+

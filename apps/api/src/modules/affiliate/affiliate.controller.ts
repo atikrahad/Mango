@@ -45,4 +45,19 @@ export class AffiliateController {
   async updateWithdrawalStatus(@Param('id') id: string, @Body() body: any) {
     return this.affiliateService.updateWithdrawalStatus(id, body);
   }
+
+  // Admin Affiliate User Management
+  @Get('admin/users')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getAdminAffiliates() {
+    return this.affiliateService.getAdminAffiliates();
+  }
+
+  @Patch('admin/users/:id/status')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async toggleAffiliateStatus(@Param('id') id: string, @Body() body: { isActive: boolean }) {
+    return this.affiliateService.toggleAffiliateStatus(id, body.isActive);
+  }
 }

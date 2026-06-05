@@ -75,6 +75,8 @@ export default function CatalogPage() {
   // Navigation Views
   const [currentView, setCurrentView] = useState<'home' | 'catalog' | 'product-detail' | 'checkout'>('home');
   const [selectedProductSlug, setSelectedProductSlug] = useState<string | null>(null);
+  // Holds a slug from URL params until products finish loading
+  const [pendingProductSlug, setPendingProductSlug] = useState<string | null>(null);
 
   // Catalog State
   const [products, setProducts] = useState<any[]>([]);
@@ -203,15 +205,35 @@ export default function CatalogPage() {
       const ref = urlParams.get('ref') || urlParams.get('referral');
       if (ref) {
         setReferralCode(ref);
-        showToast(`Orchard Ambassador referral code applied: ${ref}`, 'info');
+        showToast(`Ambassador referral link applied! You are shopping via an affiliate link.`, 'info');
       }
 
       const productParam = urlParams.get('product') || urlParams.get('p');
       if (productParam) {
-        setSelectedProductSlug(productParam);
+        // Store as pending — catalog may not be loaded yet
+        setPendingProductSlug(productParam);
+        // Switch view immediately so the product detail page shows once products arrive
+        setCurrentView('product-detail');
       }
     }
   }, []);
+
+  // Once catalog is loaded, resolve pendingProductSlug → selectedProductSlug
+  useEffect(() => {
+    if (pendingProductSlug && products.length > 0) {
+      const found = products.find(p => p.slug === pendingProductSlug);
+      if (found) {
+        setSelectedProductSlug(pendingProductSlug);
+        setPendingProductSlug(null);
+        setActivePhotoIndex(0);
+      } else {
+        // Slug not found in catalog — go to catalog view with a toast
+        showToast(`Product "${pendingProductSlug}" not found. Showing all products.`, 'info');
+        setPendingProductSlug(null);
+        setCurrentView('catalog');
+      }
+    }
+  }, [products, pendingProductSlug]);
 
   // Dynamic Shipping Charge calculation
   const getShippingCharge = () => {
@@ -1032,6 +1054,14 @@ export default function CatalogPage() {
               </div>
             )}
           </main>
+        </div>
+      )}
+
+      {/* 🚀 Product loading state (waiting for catalog to resolve affiliate product slug) */}
+      {currentView === 'product-detail' && !currentProduct && (
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
+          <p className="text-sm font-bold text-stone-500">Loading product details...</p>
         </div>
       )}
 
