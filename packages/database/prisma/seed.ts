@@ -64,13 +64,13 @@ async function main() {
       categoryId: catOrganic.id,
       name: 'Premium Himsagar Mangoes',
       slug: 'himsagar-premium',
-      description: 'Himsagar is a popular mango cultivar, originating from Rajshahi. It is known for its sweet aroma and fiberless pulpy texture.',
+      description: 'Himsagar is a popular mango cultivar. It is known for its sweet aroma and fiberless pulpy texture.',
       sweetness: 5,
       isOrganic: true,
-      originDistrict: 'Rajshahi',
+      originDistrict: 'Naogaon',
       imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
       seoTitle: 'Buy Premium Himsagar Mangoes Online | Direct Farm Delivery',
-      seoDesc: 'Savor the authentic taste of Rajshahi with fiberless, naturally sweetened premium Himsagar mangoes.',
+      seoDesc: 'Savor the authentic taste of Naogaon with fiberless, naturally sweetened premium Himsagar mangoes.',
     },
   });
 
@@ -84,10 +84,10 @@ async function main() {
       description: 'Langra is highly appreciated for its sweet, slightly acidic taste and smooth texture.',
       sweetness: 4,
       isOrganic: true,
-      originDistrict: 'Chapainawabganj',
+      originDistrict: 'Naogaon',
       imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
-      seoTitle: 'Buy Farm Fresh Langra Mangoes Online | Chapainawabganj Orchard',
-      seoDesc: 'Original sweet and tangy Langra mangoes direct from Chapainawabganj. Order online today!',
+      seoTitle: 'Buy Farm Fresh Langra Mangoes Online | Sapahar Naogaon Orchard',
+      seoDesc: 'Original sweet and tangy Langra mangoes direct from Sapahar, Naogaon. Order online today!',
     },
   });
   console.log(`🥭 Mango Products seeded: ${himsagar.name}, ${langra.name}`);

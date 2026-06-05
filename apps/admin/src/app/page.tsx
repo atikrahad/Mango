@@ -1554,7 +1554,7 @@ export default function AdminPortalPage() {
                       >
                         <option value="ALL">All Districts</option>
                         <option value="Rajshahi">Rajshahi</option>
-                        <option value="Chapainawabganj">Chapainawabganj</option>
+                        <option value="Naogaon">Naogaon</option>
                         <option value="Satkhira">Satkhira</option>
                         <option value="Dinajpur">Dinajpur</option>
                         <option value="Rangpur">Rangpur</option>
@@ -1788,7 +1788,7 @@ export default function AdminPortalPage() {
                               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-slate-800 font-extrabold cursor-pointer"
                             >
                               <option value="Rajshahi">Rajshahi</option>
-                              <option value="Chapainawabganj">Chapainawabganj</option>
+                              <option value="Naogaon">Naogaon</option>
                               <option value="Satkhira">Satkhira</option>
                               <option value="Dinajpur">Dinajpur</option>
                               <option value="Rangpur">Rangpur</option>
