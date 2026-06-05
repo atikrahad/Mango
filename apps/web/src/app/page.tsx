@@ -40,9 +40,9 @@ const PRODUCT_EXTRA_INFO: Record<string, {
     ],
     farmStory: 'The Barendra cooperative supports 42 smallholder families in Chapainawabganj. Sourced from 60-year-old heritage orchards, these Himsagar mangoes are harvested at precisely 85% maturity. They are immediately washed in mild warm water, graded by weight, and wrapped in eco-friendly paper to ripen naturally en route to your doorstep, preserving their legendary honey-sweet aroma.',
     images: [
-      'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=1000',
-      'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=1000',
-      'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?q=80&w=1000'
+      '/hero_ripe_mangoes.png',
+      '/natural_straw_ripening.png',
+      '/lush_mango_orchard.png'
     ]
   },
   'langra-special': {
@@ -61,9 +61,9 @@ const PRODUCT_EXTRA_INFO: Record<string, {
     ],
     farmStory: 'Langra mangoes are famed for their intense turpentine-sweet aroma and rich, slightly tangy undertone. Sourced from the high alluvial riverbanks of Puthia, these orchards benefit from rich silt deposits that intensify the fruit’s mineral content. Our alliance of growers ensures strict canopy management to maximize sunlight penetration, yielding exceptionally sweet and large fruits.',
     images: [
-      'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?q=80&w=1000',
-      'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=1000',
-      'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=1000'
+      '/natural_straw_ripening.png',
+      '/hero_ripe_mangoes.png',
+      '/lush_mango_orchard.png'
     ]
   }
 };
@@ -114,7 +114,7 @@ export default function CatalogPage() {
       title: 'Premium Chemical-Free Straw-Ripened Mangoes',
       desc: '100% natural and delicious Himsagar, Langra & Gopalbhog mangoes sourced directly from ancestral riverbank orchards of Chapainawabganj and Rajshahi. Delivered straight to your family.',
       btnText: 'Shop Ripe Mangoes',
-      bgImg: 'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=1200',
+      bgImg: '/hero_ripe_mangoes.png',
       action: 'catalog'
     },
     {
@@ -122,7 +122,7 @@ export default function CatalogPage() {
       title: 'Straw & Jute Covered Natural Ripening Process',
       desc: 'We strictly reject harmful artificial chemical ripener sprays (ethylene or carbide gas). Every box is graded, natural straw-wrapped, and ripens safely en route to your home.',
       btnText: 'Orchard Sourcing Story',
-      bgImg: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?q=80&w=1200',
+      bgImg: '/natural_straw_ripening.png',
       action: 'story'
     }
   ];
@@ -301,7 +301,7 @@ export default function CatalogPage() {
         referralCode: referralCode || undefined,
         customerName: billingFullName,
         customerPhone: billingPhone,
-        customerEmail: `guest_${billingPhone}@mangosteen.com`,
+        customerEmail: `guest_${billingPhone}@mangovaiya.com`,
       };
 
       const res = await api.post('/orders/checkout', payload);
@@ -381,9 +381,9 @@ export default function CatalogPage() {
     ],
     farmStory: 'Sourced from cooperative orchard groups. Our alliance of growers ensures strict canopy management to maximize natural sunlight and heat insulation, yielding exceptionally sweet and large fruits with no chemical additives.',
     images: [
-      currentProduct?.imageUrl?.[0] || 'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=1000',
-      'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=1000',
-      'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?q=80&w=1000'
+      currentProduct?.imageUrl?.[0] || '/hero_ripe_mangoes.png',
+      '/natural_straw_ripening.png',
+      '/lush_mango_orchard.png'
     ]
   };
 
@@ -399,11 +399,11 @@ export default function CatalogPage() {
             🥭
           </div>
           <div>
-            <h1 className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-emerald-700 to-amber-600 bg-clip-text text-transparent leading-none">
-              Mangosteen
+            <h1 className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent leading-none">
+              MangoVaiya
             </h1>
-            <p className="text-[10px] text-emerald-600 font-bold tracking-widest uppercase mt-0.5">
-              100% Organic Orchard
+            <p className="text-[10px] text-amber-600 font-bold tracking-widest uppercase mt-0.5">
+              100% Premium Organic Mangoes
             </p>
           </div>
         </div>
@@ -732,8 +732,8 @@ export default function CatalogPage() {
               <div className="lg:col-span-7 relative aspect-[16/10] bg-stone-100 rounded-3xl overflow-hidden border border-stone-200 shadow-sm">
                 <img 
                   src={activeOrchardInfo === 'chapai' 
-                    ? 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?q=80&w=800'
-                    : 'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=800'
+                    ? '/natural_straw_ripening.png'
+                    : '/lush_mango_orchard.png'
                   } 
                   alt="Mango Orchards cooperatives"
                   className="w-full h-full object-cover"
@@ -1512,7 +1512,7 @@ export default function CatalogPage() {
               <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-1">
                 {items.map((item) => {
                   const productObj = products.find(p => p.id === item.productId || p.name === item.name);
-                  const imageUrl = productObj?.imageUrl?.[0] || 'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=120';
+                  const imageUrl = productObj?.imageUrl?.[0] || '/hero_ripe_mangoes.png';
                   return (
                     <div key={item.variantId} className="flex justify-between items-center gap-3 py-2 border-b border-stone-100 last:border-0">
                       <div className="flex items-center gap-2.5">
@@ -1628,7 +1628,7 @@ export default function CatalogPage() {
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4 pr-1">
                   {items.map((item) => {
                     const productObj = products.find(p => p.id === item.productId || p.name === item.name);
-                    const imageUrl = productObj?.imageUrl?.[0] || 'https://images.unsplash.com/photo-1553279768-865429fa0078?q=80&w=120';
+                    const imageUrl = productObj?.imageUrl?.[0] || '/hero_ripe_mangoes.png';
                     return (
                       <div 
                         key={item.variantId}
@@ -1707,7 +1707,7 @@ export default function CatalogPage() {
       <footer className="border-t border-stone-200 bg-white py-12 px-6 text-center text-xs text-stone-500 mt-auto shadow-inner">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-left flex flex-col gap-1">
-            <h4 className="font-extrabold text-sm text-stone-800">Mangosteen Co. Orchard Direct</h4>
+            <h4 className="font-extrabold text-sm text-stone-800">MangoVaiya Orchard Direct</h4>
             <p className="font-medium text-stone-450 leading-relaxed max-w-sm">
               Sourcing safe, organic, naturally straw-ripened premium mangoes directly from cooperative grower alliances in Chapainawabganj and Rajshahi.
             </p>
@@ -1720,7 +1720,7 @@ export default function CatalogPage() {
           </div>
         </div>
         <p className="text-[10px] text-stone-400 font-semibold border-t border-stone-100 pt-6 mt-6">
-          © 2026 Mangosteen Organic Sourcing Inc. All rights reserved. Designed for safe, chemical-free direct purchase.
+          © 2026 MangoVaiya Organic Sourcing Inc. All rights reserved. Designed for safe, chemical-free direct purchase.
         </p>
       </footer>
 
