@@ -8,8 +8,15 @@ import {
   Clock, Share2, Compass, AlertCircle, RefreshCw, Package, ExternalLink, CheckCircle2
 } from 'lucide-react';
 import { Toast, useToastStore, PortalHeader, PortalLockScreen, useAffiliate } from '@mangosteen/shared';
+import { useLanguageStore } from '../../store/languageStore';
+import { translations, tProductName, tDistrict } from '../translations';
 
 export default function AffiliatePage() {
+  const { lang } = useLanguageStore();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[lang]?.[key] || translations.en[key] || '';
+  };
+
   const { user, isAuthenticated } = useAuthStore();
   const {
     profile,
@@ -39,7 +46,7 @@ export default function AffiliatePage() {
       }
     } catch (err) {
       console.error('Error fetching catalog products:', err);
-      useToastStore.getState().showToast('Could not load products. Please refresh.', 'error');
+      useToastStore.getState().showToast(lang === 'bn' ? 'পণ্য লোড করা যায়নি। অনুগ্রহ করে রিফ্রেশ করুন।' : 'Could not load products. Please refresh.', 'error');
     } finally {
       setProductsLoading(false);
     }
@@ -57,7 +64,7 @@ export default function AffiliatePage() {
     const link = `${window.location.origin}/?ref=${refCode}&product=${slug}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopiedSlug(slug);
-      useToastStore.getState().showToast('Product affiliate link copied to clipboard!', 'success');
+      useToastStore.getState().showToast(lang === 'bn' ? 'পণ্য অ্যাফিলিয়েট লিঙ্ক ক্লিপবোর্ডে কপি হয়েছে!' : 'Product affiliate link copied to clipboard!', 'success');
       setTimeout(() => setCopiedSlug(null), 2500);
     });
   };
@@ -76,11 +83,17 @@ export default function AffiliatePage() {
   if (!isAuthenticated || user?.role !== 'AFFILIATE') {
     return (
       <PortalLockScreen
-        title="Affiliate Portal Locked"
+        title={t('affiliateLockedTitle')}
         description={
-          <>
-            Please sign up or authenticate as an <span className="font-bold text-amber-400">Affiliate Seller</span> to access deep-links, click tracking, and commission balance accounts.
-          </>
+          lang === 'bn' ? (
+            <>
+              ডিপ-লিঙ্ক, ক্লিক ট্র্যাকিং এবং কমিশন ব্যালেন্স অ্যাকাউন্টে প্রবেশ করতে অনুগ্রহ করে সাইন আপ করুন বা <span className="font-bold text-amber-400">অ্যাফিলিয়েট সেলার</span> হিসেবে লগইন করুন।
+            </>
+          ) : (
+            <>
+              Please sign up or authenticate as an <span className="font-bold text-amber-400">Affiliate Seller</span> to access deep-links, click tracking, and commission balance accounts.
+            </>
+          )
         }
       />
     );
@@ -91,9 +104,9 @@ export default function AffiliatePage() {
       
       {/* Header bar */}
       <PortalHeader
-        title="Mangosteen Affiliate Hub"
-        subtitle="Performance Wallet"
-        actionLabel="Store Catalog"
+        title={t('affiliateHubTitle')}
+        subtitle={t('affiliateWalletSubtitle')}
+        actionLabel={t('storeCatalogAction')}
         actionIcon={<Compass className="w-4 h-4" />}
         actionHref="/"
       />
@@ -107,11 +120,11 @@ export default function AffiliatePage() {
               🤝
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-200">Welcome back, {user?.fullName}!</h2>
+              <h2 className="text-xl font-bold text-slate-200">{t('welcomeBack').replace('{name}', user?.fullName || '')}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Your Referral Code:{' '}
+                {t('referralCodeLabel')}{' '}
                 {loading ? (
-                  <span className="text-slate-600 font-mono">Loading...</span>
+                  <span className="text-slate-600 font-mono">{t('loading')}</span>
                 ) : (
                   <span className="font-bold text-amber-400 bg-slate-900 px-2 py-0.5 rounded-md font-mono border border-slate-800">
                     {profile?.referralCode || '—'}
@@ -125,7 +138,7 @@ export default function AffiliatePage() {
             onClick={() => { fetchAffiliateProfile(); fetchProducts(); }}
             className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold p-2.5 rounded-xl transition flex items-center gap-2"
           >
-            <RefreshCw className="w-4 h-4" /> Refresh
+            <RefreshCw className="w-4 h-4" /> {t('refreshBtn')}
           </button>
         </div>
 
@@ -143,34 +156,34 @@ export default function AffiliatePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Referral Clicks</p>
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{t('referralClicks')}</p>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-3xl font-extrabold text-slate-100">{profile?.clicksCount ?? 0}</span>
                 <Share2 className="w-5 h-5 text-sky-400" />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">Clicks tracked in last 30 days</p>
+              <p className="text-[10px] text-slate-500 mt-2">{t('clicksDesc')}</p>
             </div>
 
             <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pending Commissions</p>
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{t('pendingCommissions')}</p>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-3xl font-extrabold text-amber-400">{profile?.pendingCommissions ?? 0} BDT</span>
                 <Clock className="w-5 h-5 text-amber-400" />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">Held until delivery confirmed</p>
+              <p className="text-[10px] text-slate-500 mt-2">{t('pendingCommissionsDesc')}</p>
             </div>
 
             <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-amber-500 flex flex-col gap-2">
-              <p className="text-xs text-amber-400 font-bold uppercase tracking-wider">Available Balance</p>
+              <p className="text-xs text-amber-400 font-bold uppercase tracking-wider">{t('availableBalance')}</p>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-3xl font-extrabold text-slate-100">{profile?.walletBalance ?? 0} BDT</span>
                 <Wallet className="w-5 h-5 text-emerald-400" />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">Approved and ready for payout</p>
+              <p className="text-[10px] text-slate-500 mt-2">{t('availableBalanceDesc')}</p>
             </div>
 
             <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2">
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Withdrawn Total</p>
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{t('withdrawnTotal')}</p>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-3xl font-extrabold text-slate-100">
                   {profile?.withdrawals
@@ -179,7 +192,7 @@ export default function AffiliatePage() {
                 </span>
                 <ArrowUpRight className="w-5 h-5 text-purple-400" />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">Paid bank and MFS disbursements</p>
+              <p className="text-[10px] text-slate-500 mt-2">{t('withdrawnTotalDesc')}</p>
             </div>
           </div>
         )}
@@ -191,16 +204,16 @@ export default function AffiliatePage() {
             <div>
               <h3 className="font-extrabold text-lg text-slate-100 flex items-center gap-2">
                 <Package className="w-5 h-5 text-amber-400" />
-                Product Affiliate Link Generator
+                {t('productAffLinkGen')}
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Generate your unique affiliate link for each product. Share it — when someone buys, you earn the listed commission.
+                {t('productAffLinkGenDesc')}
               </p>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder={t('searchProductsPlaceholder')}
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition w-full sm:w-48"
@@ -224,13 +237,13 @@ export default function AffiliatePage() {
               <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-500">
                 <Package className="w-12 h-12 text-slate-700" />
                 <p className="text-sm font-semibold">
-                  {productSearch ? `No products match "${productSearch}"` : 'No products available in catalog.'}
+                  {productSearch ? t('noProductsMatch').replace('{query}', productSearch) : t('noProductsAvailable')}
                 </p>
                 <button
                   onClick={fetchProducts}
                   className="flex items-center gap-2 text-xs font-semibold text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 px-4 py-2 rounded-xl transition"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Retry Loading Products
+                  <RefreshCw className="w-3.5 h-3.5" /> {t('retryProductsBtn')}
                 </button>
               </div>
             ) : (
@@ -253,23 +266,23 @@ export default function AffiliatePage() {
                       {/* Product Info */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-col gap-0.5">
-                          <p className="text-sm font-bold text-slate-100 leading-tight">🥭 {p.name}</p>
+                          <p className="text-sm font-bold text-slate-100 leading-tight">🥭 {tProductName(p.name, lang)}</p>
                           <p className="text-[10px] text-slate-500 font-medium">
-                            📍 {p.originDistrict} &nbsp;•&nbsp; {p.category?.name || 'Seasonal'}
+                            📍 {tDistrict(p.originDistrict, lang)} &nbsp;•&nbsp; {p.category?.name || 'Seasonal'}
                           </p>
                           {minPrice !== null && (
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              From <span className="font-bold text-slate-200">{minPrice} BDT</span>
+                              {t('fromPrice').replace('{price}', String(minPrice))}
                             </p>
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-lg text-[11px] font-black whitespace-nowrap">
-                            {commPct}% earn
+                            {t('commEarn').replace('{pct}', String(commPct))}
                           </span>
                           {minPrice !== null && (
                             <span className="text-[10px] text-amber-400/80 font-semibold">
-                              ~{((minPrice * commPct) / 100).toFixed(0)} BDT/sale
+                              ~{((minPrice * commPct) / 100).toFixed(0)} {t('perSale')}
                             </span>
                           )}
                         </div>
@@ -296,9 +309,9 @@ export default function AffiliatePage() {
                         }`}
                       >
                         {isCopied ? (
-                          <><CheckCircle2 className="w-3.5 h-3.5" /> Link Copied!</>
+                          <><CheckCircle2 className="w-3.5 h-3.5" /> {t('linkCopied')}</>
                         ) : (
-                          <><Copy className="w-3.5 h-3.5" /> Copy My Affiliate Link</>
+                          <><Copy className="w-3.5 h-3.5" /> {t('copyMyAffLink')}</>
                         )}
                       </button>
                     </div>
@@ -310,7 +323,7 @@ export default function AffiliatePage() {
             {/* Total products count */}
             {!productsLoading && filteredProducts.length > 0 && (
               <p className="text-[10px] text-slate-600 text-center mt-4 font-semibold">
-                {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} available &nbsp;•&nbsp; Click any link field to select all text &nbsp;•&nbsp; Commission credited after order delivery
+                {t('productsAvailableInfo').replace('{count}', String(filteredProducts.length))}
               </p>
             )}
           </div>
@@ -322,8 +335,8 @@ export default function AffiliatePage() {
           {/* General Referral Link */}
           <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5">
             <div>
-              <h3 className="font-extrabold text-lg text-slate-100 mb-1">Your General Referral Link</h3>
-              <p className="text-xs text-slate-400">Share this link to earn commissions on any product a visitor purchases after clicking your link.</p>
+              <h3 className="font-extrabold text-lg text-slate-100 mb-1">{t('generalRefLinkTitle')}</h3>
+              <p className="text-xs text-slate-400">{t('generalRefLinkDesc')}</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -339,7 +352,7 @@ export default function AffiliatePage() {
                   onClick={() => copyToClipboard(generatedLink)}
                   className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                 >
-                  {linkCopied ? 'Copied!' : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+                  {linkCopied ? t('copied') : <><Copy className="w-3.5 h-3.5" /> {t('copy')}</>}
                 </button>
               </div>
             </div>
@@ -347,8 +360,8 @@ export default function AffiliatePage() {
             <div className="bg-slate-950/40 p-4 border border-slate-800 rounded-2xl flex gap-3 text-xs text-slate-400 leading-relaxed">
               <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-slate-200 mb-1">How Attribution Works</p>
-                <p>When a customer clicks your product or general link, the system records your referral code. If they place an order, the commission is credited to your wallet automatically — no manual entry needed.</p>
+                <p className="font-bold text-slate-200 mb-1">{t('howAttributionWorks')}</p>
+                <p>{t('howAttributionWorksDesc')}</p>
               </div>
             </div>
           </div>
@@ -356,14 +369,14 @@ export default function AffiliatePage() {
           {/* Withdrawal Request Form */}
           <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5">
             <div>
-              <h3 className="font-extrabold text-lg text-slate-100 mb-1">Submit Payout Request</h3>
-              <p className="text-xs text-slate-400">Withdraw approved wallet balance directly to your bKash, Nagad, or bank accounts.</p>
+              <h3 className="font-extrabold text-lg text-slate-100 mb-1">{t('submitPayoutRequest')}</h3>
+              <p className="text-xs text-slate-400">{t('submitPayoutRequestDesc')}</p>
             </div>
 
             <form onSubmit={handleWithdrawFormSubmit} className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-semibold">Amount (BDT)</label>
+                  <label className="text-xs text-slate-400 font-semibold">{t('amountLabel')}</label>
                   <input 
                     type="number" 
                     required
@@ -376,7 +389,7 @@ export default function AffiliatePage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-semibold">Payout Gateway</label>
+                  <label className="text-xs text-slate-400 font-semibold">{t('payoutGatewayLabel')}</label>
                   <select 
                     value={withdrawMethod}
                     onChange={(e) => setWithdrawMethod(e.target.value)}
@@ -390,13 +403,13 @@ export default function AffiliatePage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-slate-400 font-semibold">Payout Account Details</label>
+                <label className="text-xs text-slate-400 font-semibold">{t('payoutAccountDetailsLabel')}</label>
                 <input 
                   type="text" 
                   required
                   value={withdrawDetails}
                   onChange={(e) => setWithdrawDetails(e.target.value)}
-                  placeholder="e.g. bKash Personal: +8801700000000 or Bank Acc details"
+                  placeholder={t('payoutAccountDetailsPlaceholder')}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500 text-slate-200"
                 />
               </div>
@@ -407,14 +420,14 @@ export default function AffiliatePage() {
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold py-3 rounded-xl text-sm transition mt-2 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20 disabled:opacity-55 disabled:cursor-not-allowed"
               >
                 {withdrawLoading ? (
-                  <><RefreshCw className="w-4 h-4 animate-spin inline mr-1" /> Booking withdrawal...</>
+                  <><RefreshCw className="w-4 h-4 animate-spin inline mr-1" /> {t('bookingWithdrawal')}</>
                 ) : (
-                  'Request Balance Withdrawal'
+                  t('requestWithdrawalBtn')
                 )}
               </button>
 
               <p className="text-[10px] text-slate-600 text-center">
-                Minimum withdrawal: 500 BDT &nbsp;•&nbsp; Current balance: <span className="text-slate-400 font-bold">{profile?.walletBalance ?? 0} BDT</span>
+                {t('withdrawalLimitInfo').replace('{balance}', String(profile?.walletBalance ?? 0))}
               </p>
             </form>
           </div>
@@ -423,20 +436,20 @@ export default function AffiliatePage() {
         {/* Commission & Payout Ledger */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6">
           <div>
-            <h3 className="font-extrabold text-lg text-slate-100 mb-1">Commission & Payout Ledger</h3>
-            <p className="text-xs text-slate-400 font-medium">All your commission credits and withdrawal requests with status tracking.</p>
+            <h3 className="font-extrabold text-lg text-slate-100 mb-1">{t('ledgerTitle')}</h3>
+            <p className="text-xs text-slate-400 font-medium">{t('ledgerDesc')}</p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 font-bold">
-                  <th className="pb-3">Reference</th>
-                  <th className="pb-3">Type</th>
-                  <th className="pb-3">Details</th>
-                  <th className="pb-3">Amount</th>
-                  <th className="pb-3">Date</th>
-                  <th className="pb-3 text-right">Status</th>
+                  <th className="pb-3">{t('ledgerRef')}</th>
+                  <th className="pb-3">{t('ledgerType')}</th>
+                  <th className="pb-3">{t('ledgerDetails')}</th>
+                  <th className="pb-3">{t('ledgerAmount')}</th>
+                  <th className="pb-3">{t('ledgerDate')}</th>
+                  <th className="pb-3 text-right">{t('ledgerStatus')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-850">
@@ -444,9 +457,9 @@ export default function AffiliatePage() {
                   <tr key={w.id} className="text-slate-300">
                     <td className="py-3 font-semibold font-mono text-slate-400">{w.txRef || `WIT-${w.id.substring(0, 5)}`}</td>
                     <td className="py-3">
-                      <span className="bg-red-500/10 text-red-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded text-[9px]">Payout</span>
+                      <span className="bg-red-500/10 text-red-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded text-[9px]">{t('ledgerPayoutType')}</span>
                     </td>
-                    <td className="py-3 text-slate-400">{w.notes || `Disbursed to ${w.method}`}</td>
+                    <td className="py-3 text-slate-400">{w.notes || t('ledgerDisbursed').replace('{method}', w.method)}</td>
                     <td className="py-3 font-bold text-red-400">-{w.amount} BDT</td>
                     <td className="py-3 text-slate-500">{new Date(w.createdAt).toLocaleDateString()}</td>
                     <td className="py-3 text-right">
@@ -465,9 +478,9 @@ export default function AffiliatePage() {
                   <tr key={c.id} className="text-slate-300">
                     <td className="py-3 font-semibold font-mono text-slate-400">COM-{c.id.substring(0, 5).toUpperCase()}</td>
                     <td className="py-3">
-                      <span className="bg-emerald-500/10 text-emerald-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded text-[9px]">Commission</span>
+                      <span className="bg-emerald-500/10 text-emerald-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded text-[9px]">{t('ledgerCommissionType')}</span>
                     </td>
-                    <td className="py-3 text-slate-400">{c.notes || `Commission on order ${c.orderId}`}</td>
+                    <td className="py-3 text-slate-400">{c.notes || t('ledgerCommissionOrder').replace('{orderId}', c.orderId)}</td>
                     <td className="py-3 font-bold text-emerald-400">+{c.amount} BDT</td>
                     <td className="py-3 text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</td>
                     <td className="py-3 text-right">
@@ -486,7 +499,7 @@ export default function AffiliatePage() {
                  (!profile?.commissions || profile?.commissions.length === 0) && (
                   <tr>
                     <td colSpan={6} className="text-center py-10 text-slate-600 font-semibold">
-                      No transactions yet. Start sharing your affiliate links to earn commissions!
+                      {t('noTransactionsYet')}
                     </td>
                   </tr>
                 )}
