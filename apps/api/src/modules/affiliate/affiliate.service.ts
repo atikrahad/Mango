@@ -92,12 +92,12 @@ export class AffiliateService {
     });
 
     const pendingCommissions = affiliate.commissions
-      .filter((c) => c.status === CommissionStatus.PENDING)
-      .reduce((sum, c) => sum + Number(c.amount), 0);
+      .filter((c: any) => c.status === CommissionStatus.PENDING)
+      .reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
     const approvedCommissions = affiliate.commissions
-      .filter((c) => c.status === CommissionStatus.APPROVED)
-      .reduce((sum, c) => sum + Number(c.amount), 0);
+      .filter((c: any) => c.status === CommissionStatus.APPROVED)
+      .reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
     return {
       success: true,
@@ -153,7 +153,7 @@ export class AffiliateService {
       });
     }
 
-    const withdraw = await this.prisma.$transaction(async (tx) => {
+    const withdraw = await this.prisma.$transaction(async (tx: any) => {
       // Deduct balance
       await tx.affiliate.update({
         where: { id: affiliate.id },
@@ -229,7 +229,7 @@ export class AffiliateService {
       });
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx: any) => {
       // If rejected, refund the wallet balance
       if (status === PayoutStatus.REJECTED) {
         await tx.affiliate.update({
@@ -267,20 +267,20 @@ export class AffiliateService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const data = affiliates.map(aff => {
+    const data = affiliates.map((aff: any) => {
       const clicksCount = aff.clicks.length;
       
       const pendingCommissions = aff.commissions
-        .filter(c => c.status === CommissionStatus.PENDING)
-        .reduce((sum, c) => sum + Number(c.amount), 0);
+        .filter((c: any) => c.status === CommissionStatus.PENDING)
+        .reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
       const approvedCommissions = aff.commissions
-        .filter(c => c.status === CommissionStatus.APPROVED)
-        .reduce((sum, c) => sum + Number(c.amount), 0);
+        .filter((c: any) => c.status === CommissionStatus.APPROVED)
+        .reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
       const totalPaidOut = aff.withdrawals
-        .filter(w => w.status === PayoutStatus.PAID)
-        .reduce((sum, w) => sum + Number(w.amount), 0);
+        .filter((w: any) => w.status === PayoutStatus.PAID)
+        .reduce((sum: number, w: any) => sum + Number(w.amount), 0);
 
       return {
         id: aff.id,

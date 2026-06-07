@@ -7,7 +7,8 @@ export const translations = {
     navHome: 'Home Orchard',
     navShop: 'Shop Catalog',
     navStory: 'Sourcing Story',
-    hotline: 'Hot-line: +880 1906 933600',
+    hotline: 'Hot-line: +880 1788 925841',
+    langToggle: 'বাং',
 
     // Basket Drawer
     basketTitle: 'Your Shopping Basket',
@@ -22,11 +23,11 @@ export const translations = {
     // Hero Slides
     heroSlide1Badge: '👑 KING OF FRUITS — সেরা স্বাদের আম',
     heroSlide1Title: 'Premium Chemical-Free Straw-Ripened Mangoes',
-    heroSlide1Desc: '100% natural and delicious Himsagar, Langra & Gopalbhog mangoes sourced directly from ancestral riverbank orchards of Sapahar, Naogaon and Rajshahi. Delivered straight to your family.',
+    heroSlide1Desc: '100% natural and delicious Himsagar, Langra & Gopalbhog mangoes sourced directly from ancestral riverbank orchards of Sapahar and Porsha, Naogaon. Delivered straight to your family.',
     heroSlide1Btn: 'Shop Ripe Mangoes',
 
     heroSlide2Badge: '🛡️ 100% CHEMICAL FREE — নিরাপদ খাদ্যের নিশ্চয়তা',
-    heroSlide2Title: 'Straw & Jute Covered Natural Ripening Process',
+    heroSlide2Title: 'Natural Tree-Ripened Mangoes — No Chemical Sprays',
     heroSlide2Desc: 'We strictly reject harmful artificial chemical ripener sprays (ethylene or carbide gas). Every box is graded, natural straw-wrapped, and ripens safely en route to your home.',
     heroSlide2Btn: 'Orchard Sourcing Story',
     whatsappOrder: 'Order on WhatsApp',
@@ -34,17 +35,17 @@ export const translations = {
     // Trust Badges
     trustBadge1Title: '100% Chemical-Free',
     trustBadge1Desc: 'নিরাপদ কার্বাইড-মুক্ত আম',
-    trustBadge2Title: 'Straw-Ripened Natural',
-    trustBadge2Desc: 'প্রাকৃতিক উপায়ে খড়-পাকা আম',
+    trustBadge2Title: 'Naturally Tree-Ripened',
+    trustBadge2Desc: 'গাছে প্রাকৃতিকভাবে পাকানো আম',
     trustBadge3Title: 'Orchard Direct Sourced',
-    trustBadge3Desc: 'সরাসরি চাঁপাই-রাজশাহী বাগান থেকে',
+    trustBadge3Desc: 'সরাসরি সাপাহার-পোরশা বাগান থেকে',
     trustBadge4Title: 'Safe Home Delivery',
     trustBadge4Desc: 'সমগ্র বাংলাদেশে হোম ডেলিভারি',
 
     // Campaign
     campaignBadge: '🔥 SEASONAL CAMPAIGN',
     campaignTitle: 'First Harvest Flash Sale: Khirsapat-Himsagar (খিরশাপাত-হিমসাগর)',
-    campaignDesc: 'Order now to receive your organic mangoes handpicked directly from our partner cooperatives in Kansat. Naturally straw-ripened, rich aroma, and pure sweetness guaranteed.',
+    campaignDesc: 'Order now to receive your organic mangoes handpicked directly from our partner cooperatives in Kansat. Naturally tree-ripened, rich aroma, and pure sweetness guaranteed.',
     campaignRemaining: 'HARVEST TIMELINE REMAINS',
     days: 'Days',
     hrs: 'Hrs',
@@ -178,9 +179,9 @@ export const translations = {
 
     // Footer
     footerBrand: 'MangoVaiya Orchard Direct',
-    footerDesc: 'Sourcing safe, organic, naturally straw-ripened premium mangoes directly from cooperative grower alliances in Sapahar, Naogaon and Rajshahi.',
-    footerContact: 'Hotline Support: +880 1906 933600 • info@mangovaiya.com',
-    footerLocations: 'Rajshahi • Sapahar, Naogaon • Dhaka express shipping',
+    footerDesc: 'Sourcing safe, organic, naturally ripened premium mangoes directly from cooperative grower alliances in Sapahar and Porsha, Naogaon. Delivered fresh to your doorstep.',
+    footerContact: 'Hotline Support: +880 1788 925841 • info@mangovaiya.com',
+    footerLocations: 'Sapahar, Naogaon • Porsha, Naogaon • Dhaka express shipping',
     footerCopyright: '© 2026 MangoVaiya Organic Sourcing Inc. All rights reserved. Designed for safe, chemical-free direct purchase.',
 
     // Affiliate Portal
@@ -251,7 +252,8 @@ export const translations = {
     navHome: 'হোম বাগান',
     navShop: 'শপ ক্যাটালগ',
     navStory: 'সোর্সিং স্টোরি',
-    hotline: 'হট-লাইন: +৮৮০ ১৯০৬ ৯৩৩৬০০',
+    hotline: 'হট-লাইন: +৮৮০ ১৭৮৮ ৯২৫৮৪১',
+    langToggle: 'EN',
 
     // Basket Drawer
     basketTitle: 'আপনার শপিং বাস্কেট',
@@ -265,8 +267,8 @@ export const translations = {
 
     // Hero Slides
     heroSlide1Badge: '👑 KING OF FRUITS — সেরা স্বাদের আম',
-    heroSlide1Title: 'প্রিমিয়াম কেমিক্যাল-মুক্ত খড়-পাকা আম',
-    heroSlide1Desc: '১০০% প্রাকৃতিক এবং সুস্বাদু হিমসাগর, ল্যাংড়া ও গোপালভোগ আম সরাসরি নওগাঁর সাপাহার এবং রাজশাহীর আদিম নদীপাড়ের বাগান থেকে সংগৃহীত। সরাসরি আপনার পরিবারের কাছে পৌঁছে দেওয়া হয়।',
+    heroSlide1Title: 'প্রিমিয়াম কেমিক্যাল-মুক্ত প্রাকৃতিক আম',
+    heroSlide1Desc: '১০০% প্রাকৃতিক এবং সুস্বাদু হিমসাগর, ল্যাংড়া ও গোপালভোগ আম সরাসরি নওগাঁর সাপাহার ও পোরশার সমবায় বাগান থেকে সংগৃহীত। সরাসরি আপনার পরিবারের কাছে পৌঁছে দেওয়া হয়।',
     heroSlide1Btn: 'পাকা আম কিনুন',
 
     heroSlide2Badge: '🛡️ ১০০% কেমিক্যাল-মুক্ত — নিরাপদ খাদ্যের নিশ্চয়তা',
@@ -278,10 +280,10 @@ export const translations = {
     // Trust Badges
     trustBadge1Title: '১০০% কেমিক্যাল-মুক্ত',
     trustBadge1Desc: 'নিরাপদ কার্বাইড-মুক্ত আম',
-    trustBadge2Title: 'প্রাকৃতিক খড়-পাকা',
-    trustBadge2Desc: 'প্রাকৃতিক উপায়ে খড়-পাকা আম',
+    trustBadge2Title: 'প্রাকৃতিকভাবে গাছ-পাকা',
+    trustBadge2Desc: 'গাছে প্রাকৃতিকভাবে পাকানো আম',
     trustBadge3Title: 'সরাসরি বাগান থেকে',
-    trustBadge3Desc: 'সরাসরি চাঁপাই-রাজশাহী বাগান থেকে',
+    trustBadge3Desc: 'সরাসরি সাপাহার-পোরশা বাগান থেকে',
     trustBadge4Title: 'নিরাপদ হোম ডেলিভারি',
     trustBadge4Desc: 'সমগ্র বাংলাদেশে হোম ডেলিভারি',
 
@@ -422,9 +424,9 @@ export const translations = {
 
     // Footer
     footerBrand: 'ম্যাঙ্গোভাইয়া সরাসরি বাগান থেকে',
-    footerDesc: 'নওগাঁর সাপাহার এবং রাজশাহীর সমবায় চাষী জোট থেকে সরাসরি নিরাপদ, অর্গানিক এবং খড়-পাকা প্রিমিয়াম আম সরবরাহ করা হচ্ছে।',
-    footerContact: 'হটলাইন সাপোর্ট: +৮৮০ ১৯০৬ ৯৩৩৬০০ • info@mangovaiya.com',
-    footerLocations: 'রাজশাহী • সাপাহার, নওগাঁ • ঢাকা এক্সপ্রেস শিপিং',
+    footerDesc: 'নওগাঁর সাপাহার ও পোরশার সমবায় চাষী জোট থেকে সরাসরি নিরাপদ, অর্গানিক এবং প্রাকৃতিকভাবে পাকানো প্রিমিয়াম আম আপনার দরজায় পৌঁছে দেওয়া হচ্ছে।',
+    footerContact: 'হটলাইন সাপোর্ট: +৮৮০ ১৭৮৮ ৯২৫৮৪১ • info@mangovaiya.com',
+    footerLocations: 'সাপাহার, নওগাঁ • পোরশা, নওগাঁ • ঢাকা এক্সপ্রেস শিপিং',
     footerCopyright: '© ২০২৬ ম্যাঙ্গোভাইয়া অর্গানিক সোর্সিং ইনক। সর্বস্বত্ব সংরক্ষিত। নিরাপদ ও কেমিক্যাল-মুক্ত সরাসরি ক্রয়ের জন্য পরিকল্পিত।',
 
     // Affiliate Portal

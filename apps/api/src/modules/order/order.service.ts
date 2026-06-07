@@ -55,7 +55,7 @@ export class OrderService {
     }
 
     // Run order processing inside SQLite transaction
-    const orderResult = await this.prisma.$transaction(async (tx) => {
+    const orderResult = await this.prisma.$transaction(async (tx: any) => {
       let subtotal = 0;
       let totalCommission = 0;
       const orderItemsToCreate: any[] = [];
@@ -296,7 +296,7 @@ export class OrderService {
       });
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx: any) => {
       const updateData: any = { status };
 
       // If transition to DELIVERED (including COD now, since we no longer have delivery agent OTP confirmation)

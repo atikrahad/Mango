@@ -429,7 +429,7 @@ export default function CatalogPage() {
               MangoVaiya
             </h1>
             <p className="text-[10px] text-amber-600 font-bold tracking-widest uppercase mt-0.5">
-              100% Premium Organic Mangoes
+              {t('brandTagline')}
             </p>
           </div>
         </div>
@@ -440,27 +440,36 @@ export default function CatalogPage() {
             onClick={() => { setCurrentView('home'); setSelectedProductSlug(null); }} 
             className={`transition flex items-center gap-1 hover:text-emerald-600 ${currentView === 'home' ? 'text-emerald-700 font-black border-b-2 border-emerald-600 pb-0.5' : ''}`}
           >
-            Home Orchard
+            {t('navHome')}
           </button>
           <button 
             onClick={() => { setCurrentView('catalog'); setSelectedProductSlug(null); }} 
             className={`transition flex items-center gap-1.5 hover:text-emerald-600 ${currentView === 'catalog' ? 'text-emerald-700 font-black border-b-2 border-emerald-600 pb-0.5' : ''}`}
           >
-            <Compass className="w-4 h-4" /> Shop Catalog
+            <Compass className="w-4 h-4" /> {t('navShop')}
           </button>
           <a href="#sourcing-story-sec" className="hover:text-emerald-600 transition flex items-center gap-1.5">
-            <Info className="w-4 h-4" /> Sourcing Story
+            <Info className="w-4 h-4" /> {t('navStory')}
           </a>
         </nav>
 
-        {/* Corporate Phone hotline & cart */}
-        <div className="flex items-center gap-4">
+        {/* Corporate Phone hotline, lang toggle & cart */}
+        <div className="flex items-center gap-3">
           <a 
-            href="tel:+8801906933600" 
+            href="tel:+8801788925841" 
             className="hidden lg:flex items-center gap-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition"
           >
-            <Phone className="w-3.5 h-3.5" /> Hot-line: +880 1906 933600
+            <Phone className="w-3.5 h-3.5" /> {t('hotline')}
           </a>
+
+          {/* Language Toggle */}
+          <button
+            onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
+            className="flex items-center gap-1 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl text-xs font-extrabold transition"
+            title={lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}
+          >
+            🌐 {t('langToggle')}
+          </button>
 
           {/* Cart Icon Toggle */}
           <button 
@@ -511,7 +520,7 @@ export default function CatalogPage() {
                       {t(slide.btnTextKey)} <ArrowRight className="w-4 h-4" />
                     </button>
                     <a 
-                      href="https://wa.me/8801906933600" 
+                      href="https://wa.me/8801788925841" 
                       target="_blank"
                       className="bg-white border border-stone-300 hover:border-emerald-500 hover:bg-stone-50 text-stone-700 px-6 py-3.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2"
                     >
