@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
+import { useLanguageStore } from '../store/languageStore';
+import { translations, tDistrict, tProductName, tProductDesc, tCategoryName, tSpecLabel, tSpecValue, tFarmName, tFarmStory } from './translations';
 import { Toast, useToastStore } from '@mangosteen/shared';
 import { 
   ShoppingBag, Trash2, Filter, Search, ShieldCheck, 
   MapPin, Star, Sparkles, RefreshCw, Compass, CheckCircle2, 
   Info, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, 
-  MessageSquare, Truck, Heart, Share2, Scale, Check, Phone, ArrowRight
+  MessageSquare, Truck, Heart, Share2, Scale, Check, Phone, ArrowRight, Globe
 } from 'lucide-react';
 
 // Sourced farm details and descriptions for product specs
@@ -69,6 +71,25 @@ const PRODUCT_EXTRA_INFO: Record<string, {
 };
 
 export default function CatalogPage() {
+  const { lang, setLang, detectLanguage } = useLanguageStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    detectLanguage();
+  }, []);
+
+  const t = (key: keyof typeof translations['en'], variables?: Record<string, string | number>) => {
+    const currentLang = mounted ? lang : 'bn'; // Default to Bangla during SSR and initial client hydration
+    let text = translations[currentLang][key] || translations['bn'][key] || '';
+    if (variables) {
+      Object.entries(variables).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, String(v));
+      });
+    }
+    return text;
+  };
+
   const { user, accessToken, isAuthenticated, setSession, logout } = useAuthStore();
   const { items, referralCode, setReferralCode, addToCart, removeFromCart, updateQuantity, clearCart, getSubtotal } = useCartStore();
 
@@ -110,18 +131,18 @@ export default function CatalogPage() {
   const [heroSlide, setHeroSlide] = useState(0);
   const heroSlides = [
     {
-      badge: '👑 KING OF FRUITS — সেরা স্বাদের আম',
-      title: 'Premium Chemical-Free Straw-Ripened Mangoes',
-      desc: '100% natural and delicious Himsagar, Langra & Gopalbhog mangoes sourced directly from ancestral riverbank orchards of Sapahar, Naogaon and Rajshahi. Delivered straight to your family.',
-      btnText: 'Shop Ripe Mangoes',
+      badgeKey: 'heroSlide1Badge' as const,
+      titleKey: 'heroSlide1Title' as const,
+      descKey: 'heroSlide1Desc' as const,
+      btnTextKey: 'heroSlide1Btn' as const,
       bgImg: '/hero_ripe_mangoes.png',
       action: 'catalog'
     },
     {
-      badge: '🛡️ 100% CHEMICAL FREE — নিরাপদ খাদ্যের নিশ্চয়তা',
-      title: 'Straw & Jute Covered Natural Ripening Process',
-      desc: 'We strictly reject harmful artificial chemical ripener sprays (ethylene or carbide gas). Every box is graded, natural straw-wrapped, and ripens safely en route to your home.',
-      btnText: 'Orchard Sourcing Story',
+      badgeKey: 'heroSlide2Badge' as const,
+      titleKey: 'heroSlide2Title' as const,
+      descKey: 'heroSlide2Desc' as const,
+      btnTextKey: 'heroSlide2Btn' as const,
       bgImg: '/natural_straw_ripening.png',
       action: 'story'
     }
@@ -249,7 +270,7 @@ export default function CatalogPage() {
   // Validate and apply promo discount coupon
   const checkCoupon = async () => {
     if (!couponCode) {
-      showToast('Please type a coupon code.', 'error');
+      showToast(lang === 'bn' ? 'অনুগ্রহ করে কুপন কোডটি লিখুন।' : 'Please type a coupon code.', 'error');
       return;
     }
     try {
@@ -265,10 +286,15 @@ export default function CatalogPage() {
         
         setAppliedCoupon(couponCode);
         setDiscountAmount(discount);
-        showToast(`Coupon applied successfully! You saved ${discount} BDT.`, 'success');
+        showToast(
+          lang === 'bn' 
+            ? `কুপন সফলভাবে প্রয়োগ করা হয়েছে! আপনি ${discount} টাকা ছাড় পেয়েছেন।` 
+            : `Coupon applied successfully! You saved ${discount} BDT.`, 
+          'success'
+        );
       }
     } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Invalid or expired discount coupon code.';
+      const msg = e.response?.data?.error?.message || (lang === 'bn' ? 'ভুল বা মেয়াদোত্তীর্ণ কুপন কোড।' : 'Invalid or expired discount coupon code.');
       showToast(msg, 'error');
     }
   };
@@ -277,11 +303,11 @@ export default function CatalogPage() {
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
-      showToast('Your basket is empty. ঝুড়িতে কোনো আম নেই।', 'error');
+      showToast(lang === 'bn' ? 'আপনার ঝুড়ি খালি। অনুগ্রহ করে ঝুড়িতে আম যোগ করুন।' : 'Your basket is empty. Please add mangoes to your basket.', 'error');
       return;
     }
     if (!billingFullName || !billingPhone || !billingAddress) {
-      showToast('Please enter your Name, Mobile Number, and Address. অনুগ্রহ করে নাম, মোবাইল নম্বর এবং ঠিকানা লিখুন।', 'error');
+      showToast(lang === 'bn' ? 'অনুগ্রহ করে আপনার নাম, মোবাইল নম্বর এবং ঠিকানা লিখুন।' : 'Please enter your Name, Mobile Number, and Address.', 'error');
       return;
     }
 
@@ -310,13 +336,13 @@ export default function CatalogPage() {
         clearCart();
         setAppliedCoupon(null);
         setDiscountAmount(0);
-        showToast('Your fresh organic mango order has been placed! অর্ডারটি সফল হয়েছে।', 'success');
+        showToast(lang === 'bn' ? 'আপনার টাটকা অর্গানিক আম অর্ডার সফলভাবে সম্পন্ন হয়েছে! ধন্যবাদ।' : 'Your fresh organic mango order has been placed successfully!', 'success');
         setCurrentView('home');
         setSelectedProductSlug(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (e: any) {
-      const msg = e.response?.data?.error?.message || 'Could not process order checkout.';
+      const msg = e.response?.data?.error?.message || (lang === 'bn' ? 'অর্ডার সম্পন্ন করা যায়নি। পুনরায় চেষ্টা করুন।' : 'Could not process order checkout.');
       showToast(msg, 'error');
     } finally {
       setCheckoutLoading(false);
@@ -327,14 +353,14 @@ export default function CatalogPage() {
   const submitReview = (e: React.FormEvent, slug: string) => {
     e.preventDefault();
     if (!reviewName || !reviewComment) {
-      showToast('Please fill in your name and comment.', 'error');
+      showToast(lang === 'bn' ? 'অনুগ্রহ করে আপনার নাম এবং মন্তব্য লিখুন।' : 'Please fill in your name and comment.', 'error');
       return;
     }
 
     const newReview = {
       name: reviewName,
       rating: reviewRating,
-      date: 'Today',
+      date: lang === 'bn' ? 'আজ' : 'Today',
       comment: reviewComment,
       verified: true
     };
@@ -347,7 +373,7 @@ export default function CatalogPage() {
     setReviewName('');
     setReviewComment('');
     setReviewRating(5);
-    showToast('Your verified rating has been published! ধন্যবাদ।', 'success');
+    showToast(t('reviewFormSubmitted'), 'success');
   };
 
   const handleHeroAction = (action: string) => {
@@ -403,7 +429,7 @@ export default function CatalogPage() {
               MangoVaiya
             </h1>
             <p className="text-[10px] text-amber-600 font-bold tracking-widest uppercase mt-0.5">
-              100% Premium Organic Mangoes
+              {t('brandTagline')}
             </p>
           </div>
         </div>
@@ -414,27 +440,36 @@ export default function CatalogPage() {
             onClick={() => { setCurrentView('home'); setSelectedProductSlug(null); }} 
             className={`transition flex items-center gap-1 hover:text-emerald-600 ${currentView === 'home' ? 'text-emerald-700 font-black border-b-2 border-emerald-600 pb-0.5' : ''}`}
           >
-            Home Orchard
+            {t('navHome')}
           </button>
           <button 
             onClick={() => { setCurrentView('catalog'); setSelectedProductSlug(null); }} 
             className={`transition flex items-center gap-1.5 hover:text-emerald-600 ${currentView === 'catalog' ? 'text-emerald-700 font-black border-b-2 border-emerald-600 pb-0.5' : ''}`}
           >
-            <Compass className="w-4 h-4" /> Shop Catalog
+            <Compass className="w-4 h-4" /> {t('navShop')}
           </button>
           <a href="#sourcing-story-sec" className="hover:text-emerald-600 transition flex items-center gap-1.5">
-            <Info className="w-4 h-4" /> Sourcing Story
+            <Info className="w-4 h-4" /> {t('navStory')}
           </a>
         </nav>
 
-        {/* Corporate Phone hotline & cart */}
-        <div className="flex items-center gap-4">
+        {/* Corporate Phone hotline, lang toggle & cart */}
+        <div className="flex items-center gap-3">
           <a 
-            href="tel:+8801906933600" 
+            href="tel:+8801788925841" 
             className="hidden lg:flex items-center gap-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition"
           >
-            <Phone className="w-3.5 h-3.5" /> Hot-line: +880 1906 933600
+            <Phone className="w-3.5 h-3.5" /> {t('hotline')}
           </a>
+
+          {/* Language Toggle */}
+          <button
+            onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
+            className="flex items-center gap-1 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl text-xs font-extrabold transition"
+            title={lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}
+          >
+            🌐 {t('langToggle')}
+          </button>
 
           {/* Cart Icon Toggle */}
           <button 
@@ -469,27 +504,27 @@ export default function CatalogPage() {
                 
                 <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-16 max-w-3xl gap-4">
                   <span className="inline-block bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-black px-4 py-1.5 rounded-full w-max tracking-wide uppercase shadow-sm">
-                    {slide.badge}
+                    {t(slide.badgeKey)}
                   </span>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-none text-stone-900 drop-shadow-sm">
-                    {slide.title}
+                    {t(slide.titleKey)}
                   </h2>
                   <p className="text-sm md:text-base text-stone-600 leading-relaxed max-w-xl font-medium">
-                    {slide.desc}
+                    {t(slide.descKey)}
                   </p>
                   <div className="flex gap-3 mt-4">
                     <button 
                       onClick={() => handleHeroAction(slide.action)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-3.5 rounded-xl text-sm font-extrabold shadow-md hover:shadow-lg transition flex items-center gap-2"
                     >
-                      {slide.btnText} <ArrowRight className="w-4 h-4" />
+                      {t(slide.btnTextKey)} <ArrowRight className="w-4 h-4" />
                     </button>
                     <a 
-                      href="https://wa.me/8801906933600" 
+                      href="https://wa.me/8801788925841" 
                       target="_blank"
                       className="bg-white border border-stone-300 hover:border-emerald-500 hover:bg-stone-50 text-stone-700 px-6 py-3.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2"
                     >
-                      💬 Order on WhatsApp
+                      💬 {t('whatsappOrder')}
                     </a>
                   </div>
                 </div>
@@ -517,8 +552,8 @@ export default function CatalogPage() {
                   🛡️
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">100% Chemical-Free</h4>
-                  <p className="text-xs text-stone-500 font-medium">নিরাপদ কার্বাইড-মুক্ত আম</p>
+                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">{t('trustBadge1Title')}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{t('trustBadge1Desc')}</p>
                 </div>
               </div>
 
@@ -527,8 +562,8 @@ export default function CatalogPage() {
                   🌾
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">Straw-Ripened Natural</h4>
-                  <p className="text-xs text-stone-500 font-medium">প্রাকৃতিক উপায়ে খড়-পাকা আম</p>
+                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">{t('trustBadge2Title')}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{t('trustBadge2Desc')}</p>
                 </div>
               </div>
 
@@ -537,8 +572,8 @@ export default function CatalogPage() {
                   📍
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">Orchard Direct Sourced</h4>
-                  <p className="text-xs text-stone-500 font-medium">সরাসরি চাঁপাই-রাজশাহী বাগান থেকে</p>
+                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">{t('trustBadge3Title')}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{t('trustBadge3Desc')}</p>
                 </div>
               </div>
 
@@ -547,8 +582,8 @@ export default function CatalogPage() {
                   🚚
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">Safe Home Delivery</h4>
-                  <p className="text-xs text-stone-500 font-medium">সমগ্র বাংলাদেশে হোম ডেলিভারি</p>
+                  <h4 className="font-extrabold text-stone-800 text-sm md:text-base leading-tight">{t('trustBadge4Title')}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{t('trustBadge4Desc')}</p>
                 </div>
               </div>
 
@@ -563,37 +598,37 @@ export default function CatalogPage() {
               
               <div className="flex flex-col gap-3 relative z-10 max-w-lg">
                 <span className="bg-amber-400 text-emerald-950 font-black text-[10px] tracking-widest uppercase px-3 py-1 rounded-full w-max shadow">
-                  🔥 SEASONAL CAMPAIGN
+                  {t('campaignBadge')}
                 </span>
                 <h3 className="text-3xl md:text-4xl font-black leading-tight">
-                  First Harvest Flash Sale: Khirsapat-Himsagar (খিরশাপাত-হিমসাগর)
+                  {t('campaignTitle')}
                 </h3>
                 <p className="text-xs text-emerald-100 font-medium">
-                  Order now to receive your organic mangoes handpicked directly from our partner cooperatives in Kansat. Naturally straw-ripened, rich aroma, and pure sweetness guaranteed.
+                  {t('campaignDesc')}
                 </p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl flex flex-col items-center gap-4 text-center min-w-[240px] relative z-10 shadow-lg">
-                <p className="text-[10px] text-amber-300 font-black tracking-widest uppercase">HARVEST TIMELINE REMAINS</p>
+                <p className="text-[10px] text-amber-300 font-black tracking-widest uppercase">{t('campaignRemaining')}</p>
                 <div className="flex gap-3 text-stone-900">
                   <div className="bg-white w-12 h-12 rounded-xl flex flex-col justify-center items-center shadow-md">
                     <span className="font-black text-lg text-emerald-700 leading-none">03</span>
-                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">Days</span>
+                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">{t('days')}</span>
                   </div>
                   <div className="bg-white w-12 h-12 rounded-xl flex flex-col justify-center items-center shadow-md">
                     <span className="font-black text-lg text-emerald-700 leading-none">14</span>
-                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">Hrs</span>
+                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">{t('hrs')}</span>
                   </div>
                   <div className="bg-white w-12 h-12 rounded-xl flex flex-col justify-center items-center shadow-md">
                     <span className="font-black text-lg text-emerald-700 leading-none">42</span>
-                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">Mins</span>
+                    <span className="text-[8px] font-bold text-stone-500 mt-0.5">{t('mins')}</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => setCurrentView('catalog')}
                   className="bg-amber-400 hover:bg-amber-500 text-stone-950 text-xs font-black py-2.5 px-6 rounded-xl transition w-full shadow-md"
                 >
-                  Shop Flash Sale Now
+                  {t('campaignShopBtn')}
                 </button>
               </div>
             </div>
@@ -603,15 +638,15 @@ export default function CatalogPage() {
           <section className="px-6 py-12 max-w-7xl mx-auto w-full flex flex-col gap-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">📦 ORCHARD SELECTIONS</span>
-                <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">Our Premium Seasonal Mangoes</h3>
-                <p className="text-xs text-stone-500 mt-1">Naturally matured on branches, sorted by weight, and certified safe.</p>
+                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">{t('catalogBadge')}</span>
+                <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">{t('catalogTitle')}</h3>
+                <p className="text-xs text-stone-500 mt-1">{t('catalogDesc')}</p>
               </div>
               <button 
                 onClick={() => setCurrentView('catalog')}
                 className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow-sm w-max"
               >
-                Explore Sourced Catalog
+                {t('catalogExploreBtn')}
               </button>
             </div>
 
@@ -634,37 +669,37 @@ export default function CatalogPage() {
                     <div className="aspect-[4/3] bg-stone-100 relative overflow-hidden">
                       <img 
                         src={product.imageUrl?.[0] || 'https://images.unsplash.com/photo-1553279768-865429fa0078'} 
-                        alt={product.name}
+                        alt={tProductName(product.name, lang)}
                         className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
                       />
                       {product.isOrganic && (
                         <span className="absolute top-4 left-4 bg-emerald-600 text-white font-extrabold text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">
-                          🌿 Safe & Organic
+                          🌿 {t('safeAndOrganic')}
                         </span>
                       )}
                       <span className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md text-[10px] text-stone-750 font-black px-2.5 py-1 rounded-lg shadow-sm border border-stone-200/50 flex items-center gap-1">
-                        📍 {product.originDistrict}
+                        📍 {tDistrict(product.originDistrict, lang)}
                       </span>
                     </div>
 
                     <div className="p-6 flex-grow flex flex-col gap-4">
                       <div className="flex-grow">
                         <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-extrabold uppercase tracking-wider mb-1.5">
-                          <span>{product.category?.name || 'Fresh Fruit'}</span>
+                          <span>{tCategoryName(product.category?.name || 'Fresh Fruit', lang)}</span>
                           <span>•</span>
-                          <span className="text-amber-500">In Stock</span>
+                          <span className="text-amber-500">{t('inStock')}</span>
                         </div>
                         <h4 className="font-extrabold text-lg text-stone-850 group-hover:text-emerald-700 transition leading-tight mb-2">
-                          {product.name}
+                          {tProductName(product.name, lang)}
                         </h4>
                         <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
-                          {product.description}
+                          {tProductDesc(product.description, product.slug, lang)}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-stone-100 pt-4 mt-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-stone-400 font-bold">Sweetness:</span>
+                          <span className="text-xs text-stone-400 font-bold">{t('sweetnessLabel')}</span>
                           <div className="flex text-amber-500">
                             {Array.from({ length: product.sweetness }).map((_, i) => (
                               <Star key={i} className="w-3.5 h-3.5 fill-current" />
@@ -673,7 +708,7 @@ export default function CatalogPage() {
                         </div>
                         
                         <span className="text-xs font-black text-emerald-600 group-hover:underline flex items-center gap-1">
-                          Order Box <ChevronRight className="w-3.5 h-3.5" />
+                          {t('orderBox')} <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </div>
                     </div>
@@ -688,12 +723,12 @@ export default function CatalogPage() {
             <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
               
               <div className="lg:col-span-5 flex flex-col gap-6">
-                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">📍 DIRECT ORCHARD SOURCING</span>
+                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">{t('sourcingBadge')}</span>
                 <h3 className="text-3xl md:text-4xl font-black text-stone-850 leading-tight">
-                  Sourced Directly From Farmer Cooperatives
+                  {t('sourcingTitle')}
                 </h3>
                 <p className="text-sm text-stone-500 leading-relaxed font-medium">
-                  We reject the standard wholesale model that forces orchard owners to sell early or use synthetic chemical sprays. Every box you purchase is harvested at peak maturity and tracked directly to certified grower cooperatives in Sapahar and Porsha.
+                  {t('sourcingDesc')}
                 </p>
 
                 <div className="flex flex-col gap-3.5 mt-2">
@@ -703,11 +738,11 @@ export default function CatalogPage() {
                   >
                     <h4 className="font-extrabold text-sm flex items-center gap-2">
                       {activeOrchardInfo === 'sapahar' && <span className="w-2 h-2 rounded-full bg-emerald-600" />}
-                      Barendra Cooperative — Sapahar, Naogaon
+                      {t('coop1Title')}
                     </h4>
                     {activeOrchardInfo === 'sapahar' && (
                       <p className="text-xs text-stone-500 mt-2 leading-relaxed font-medium">
-                        Supporting 42 local families. Sourced from premium high-yield Sapahar clay orchards, yielding intensely aromatic Khirsapat-Himsagar with rich honey sweetness.
+                        {t('coop1Desc')}
                       </p>
                     )}
                   </div>
@@ -718,11 +753,11 @@ export default function CatalogPage() {
                   >
                     <h4 className="font-extrabold text-sm flex items-center gap-2">
                       {activeOrchardInfo === 'rajshahi' && <span className="w-2 h-2 rounded-full bg-emerald-600" />}
-                      Porsha Premium Growers Alliance — Naogaon
+                      {t('coop2Title')}
                     </h4>
                     {activeOrchardInfo === 'rajshahi' && (
                       <p className="text-xs text-stone-500 mt-2 leading-relaxed font-medium">
-                        BENEFITING fertile orchards of Naogaon. Renowned for natural ripening of Langra and Amrapali wrapped carefully in eco-friendly paper.
+                        {t('coop2Desc')}
                       </p>
                     )}
                   </div>
@@ -744,7 +779,7 @@ export default function CatalogPage() {
                     <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                     <div>
                       <h5 className="font-extrabold text-xs text-stone-900">
-                        {activeOrchardInfo === 'sapahar' ? 'Sapahar Mango Hub, Naogaon' : 'Porsha Cooperatives, Naogaon'}
+                        {activeOrchardInfo === 'sapahar' ? t('mapLabel1') : t('mapLabel2')}
                       </h5>
                       <p className="text-[10px] text-stone-500 font-medium mt-1">
                         GPS: 24.5985° N, 88.2694° E • BSTI Organic Grade-A Standard Verified.
@@ -760,9 +795,9 @@ export default function CatalogPage() {
           {/* Testimonials */}
           <section className="px-6 py-16 max-w-7xl mx-auto w-full flex flex-col gap-8">
             <div className="text-center max-w-xl mx-auto">
-              <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">🤝 TRUST VERIFIED</span>
-              <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">What Our Customers Say</h3>
-              <p className="text-xs text-stone-500 font-semibold mt-1">Over 2,500+ happy families served across Bangladesh</p>
+              <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">{t('testimonialBadge')}</span>
+              <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">{t('testimonialTitle')}</h3>
+              <p className="text-xs text-stone-500 font-semibold mt-1">{t('testimonialSubtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -772,7 +807,7 @@ export default function CatalogPage() {
                     {[1,2,3,4,5].map((s) => <Star key={s} className="w-4 h-4 fill-current" />)}
                   </div>
                   <p className="text-xs text-stone-600 font-medium leading-relaxed italic">
-                    "I ordered a 10kg box of Himsagar. The aroma when opening the package was incredible, exactly like the fresh mangoes from my childhood. Highly recommended for families with kids!"
+                    {t('testimonial1Text')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 border-t border-stone-100 pt-4 mt-4">
@@ -780,8 +815,8 @@ export default function CatalogPage() {
                     MH
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-stone-850">Mahbub Hasan</h5>
-                    <p className="text-[10px] text-stone-400 font-semibold">Uttara, Dhaka (Verified Buyer)</p>
+                    <h5 className="font-extrabold text-xs text-stone-850">{t('testimonial1Name')}</h5>
+                    <p className="text-[10px] text-stone-400 font-semibold">{t('testimonial1Role')}</p>
                   </div>
                 </div>
               </div>
@@ -792,7 +827,7 @@ export default function CatalogPage() {
                     {[1,2,3,4,5].map((s) => <Star key={s} className="w-4 h-4 fill-current" />)}
                   </div>
                   <p className="text-xs text-stone-600 font-medium leading-relaxed italic">
-                    "Honestly, I was skeptical about ordering raw straw-ripened mangoes online. But they arrived beautifully packed, naturally ripened in 2 days at home, and the taste is fiberless and honey sweet."
+                    {t('testimonial2Text')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 border-t border-stone-100 pt-4 mt-4">
@@ -800,8 +835,8 @@ export default function CatalogPage() {
                     NS
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-stone-850">Nusrat Jahan</h5>
-                    <p className="text-[10px] text-stone-400 font-semibold">Chittagong (Verified Buyer)</p>
+                    <h5 className="font-extrabold text-xs text-stone-850">{t('testimonial2Name')}</h5>
+                    <p className="text-[10px] text-stone-400 font-semibold">{t('testimonial2Role')}</p>
                   </div>
                 </div>
               </div>
@@ -812,7 +847,7 @@ export default function CatalogPage() {
                     {[1,2,3,4,5].map((s) => <Star key={s} className="w-4 h-4 fill-current" />)}
                   </div>
                   <p className="text-xs text-stone-600 font-medium leading-relaxed italic">
-                    "Fast shipping and superb quality control. Best part is they trace every batch to the orchards. The GI certificate inside the box shows true authenticity. MangoVaiya standard has met its match!"
+                    {t('testimonial3Text')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 border-t border-stone-100 pt-4 mt-4">
@@ -820,8 +855,8 @@ export default function CatalogPage() {
                     AH
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-stone-850">Asif Hasan</h5>
-                    <p className="text-[10px] text-stone-400 font-semibold">Dhanmondi, Dhaka (Verified Buyer)</p>
+                    <h5 className="font-extrabold text-xs text-stone-850">{t('testimonial3Name')}</h5>
+                    <p className="text-[10px] text-stone-400 font-semibold">{t('testimonial3Role')}</p>
                   </div>
                 </div>
               </div>
@@ -832,28 +867,28 @@ export default function CatalogPage() {
           <section className="px-6 py-16 bg-stone-100 border-t border-stone-200/80 w-full">
             <div className="max-w-3xl mx-auto w-full flex flex-col gap-8">
               <div className="text-center">
-                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">💬 QUESTIONS & ANSWERS</span>
-                <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">Frequently Asked Questions</h3>
-                <p className="text-xs text-stone-500 font-medium mt-1">Everything you need to know about secure organic checkout</p>
+                <span className="text-xs text-emerald-600 font-black tracking-widest uppercase">{t('faqBadge')}</span>
+                <h3 className="text-2xl md:text-3xl font-black text-stone-850 mt-1">{t('faqTitle')}</h3>
+                <p className="text-xs text-stone-500 font-medium mt-1">{t('faqSubtitle')}</p>
               </div>
 
               <div className="flex flex-col gap-3">
                 {[
                   {
-                    q: "How do you guarantee that the mangoes are chemical-free?",
-                    a: "We work directly with certified cooperative orchard growers who pledge chemical-free cultivation. Our team performs spot-tests on batches using digital maturity meters. No carbide or thermal chemical sprays are used during storage or transport."
+                    qKey: 'faqQ1' as const,
+                    aKey: 'faqA1' as const
                   },
                   {
-                    q: "Do I need to sign up or register to buy?",
-                    a: "No! There is absolutely no need to create or remember passwords. Simply add items to your basket, fill in your delivery name, mobile number, and address in the single-page form at checkout, and hit place order. We authenticate your phone seamlessly in the background."
+                    qKey: 'faqQ2' as const,
+                    aKey: 'faqA2' as const
                   },
                   {
-                    q: "What is your delivery charge and time?",
-                    a: "Delivery inside Rajshahi district is 60 BDT. Chittagong and Sylhet is 150 BDT. Dhaka and other areas is 120 BDT. All orders are harvested fresh, straw-packed, and shipped via direct express cargo. It takes 24-48 hours from orchard harvesting to reach your doorstep."
+                    qKey: 'faqQ3' as const,
+                    aKey: 'faqA3' as const
                   },
                   {
-                    q: "How does Cash on Delivery (COD) secure OTP work?",
-                    a: "To ensure absolute logistics tracking, when the delivery rider arrives at your doorstep with the mango boxes, a 6-digit secure SMS OTP is triggered. Share this code with the rider upon inspection to settle payment and confirm delivery."
+                    qKey: 'faqQ4' as const,
+                    aKey: 'faqA4' as const
                   }
                 ].map((item, idx) => (
                   <div key={idx} className="bg-white border border-stone-200/80 rounded-2xl overflow-hidden shadow-sm">
@@ -861,12 +896,12 @@ export default function CatalogPage() {
                       onClick={() => setFaqOpenIndex(faqOpenIndex === idx ? null : idx)}
                       className="w-full text-left px-6 py-4 font-extrabold text-sm md:text-base flex justify-between items-center text-stone-800 hover:text-emerald-700 transition"
                     >
-                      <span>{item.q}</span>
+                      <span>{t(item.qKey)}</span>
                       <span className="text-stone-400">{faqOpenIndex === idx ? '−' : '+'}</span>
                     </button>
                     {faqOpenIndex === idx && (
                       <div className="px-6 pb-5 text-xs md:text-sm text-stone-500 font-medium leading-relaxed border-t border-stone-100 pt-3">
-                        {item.a}
+                        {t(item.aKey)}
                       </div>
                     )}
                   </div>
@@ -887,11 +922,11 @@ export default function CatalogPage() {
             
             {/* Search Input bar */}
             <div className="bg-white border border-stone-200/85 p-5 rounded-3xl shadow-sm flex flex-col gap-3">
-              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">Search Catalog</h4>
+              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">{t('searchCatalog')}</h4>
               <div className="relative">
                 <input 
                   type="text" 
-                  placeholder="Himsagar, Langra..." 
+                  placeholder={t('searchPlaceholder')} 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-emerald-600 transition"
@@ -904,7 +939,7 @@ export default function CatalogPage() {
             <div className="bg-white border border-stone-200/85 p-5 rounded-3xl shadow-sm flex flex-col gap-4">
               <div className="flex items-center gap-1.5 text-stone-850">
                 <Filter className="w-4 h-4 text-emerald-600" />
-                <h4 className="font-extrabold text-sm uppercase tracking-wider">Orchard Collections</h4>
+                <h4 className="font-extrabold text-sm uppercase tracking-wider">{t('orchardCollections')}</h4>
               </div>
               
               <div className="flex flex-col gap-2">
@@ -912,7 +947,7 @@ export default function CatalogPage() {
                   onClick={() => setSelectedCategorySlug('')}
                   className={`text-left text-xs px-3.5 py-2 rounded-xl font-bold transition ${!selectedCategorySlug ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-600 hover:bg-stone-50'}`}
                 >
-                  All Collections
+                  {t('allCollections')}
                 </button>
                 {categories.map((cat) => (
                   <button 
@@ -920,7 +955,7 @@ export default function CatalogPage() {
                     onClick={() => setSelectedCategorySlug(cat.slug)}
                     className={`text-left text-xs px-3.5 py-2 rounded-xl font-bold transition ${selectedCategorySlug === cat.slug ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-600 hover:bg-stone-50'}`}
                   >
-                    {cat.name}
+                    {tCategoryName(cat.name, lang)}
                   </button>
                 ))}
               </div>
@@ -928,22 +963,22 @@ export default function CatalogPage() {
 
             {/* Regional Origin Filter */}
             <div className="bg-white border border-stone-200/85 p-5 rounded-3xl shadow-sm flex flex-col gap-3">
-              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">Origin District</h4>
+              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">{t('originDistrict')}</h4>
               <select 
                 value={selectedDistrict}
                 onChange={(e) => setSelectedDistrict(e.target.value)}
                 className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-750 font-bold focus:outline-none focus:border-emerald-600 transition"
               >
-                <option value="">All Regions</option>
-                <option value="Rajshahi">Rajshahi</option>
-                <option value="Naogaon">Naogaon</option>
-                <option value="Sathkhira">Sathkhira</option>
+                <option value="">{t('allRegions')}</option>
+                <option value="Rajshahi">{tDistrict('Rajshahi', lang)}</option>
+                <option value="Naogaon">{tDistrict('Naogaon', lang)}</option>
+                <option value="Sathkhira">{tDistrict('Sathkhira', lang)}</option>
               </select>
             </div>
 
             {/* Sweetness star */}
             <div className="bg-white border border-stone-200/85 p-5 rounded-3xl shadow-sm flex flex-col gap-3">
-              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">Brix Sweetness Star</h4>
+              <h4 className="font-extrabold text-sm text-stone-800 uppercase tracking-wider">{t('brixSweetnessLabel')}</h4>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((stars) => (
                   <button 
@@ -967,7 +1002,7 @@ export default function CatalogPage() {
                 className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 bg-stone-50 cursor-pointer"
               />
               <label htmlFor="organic-check" className="text-xs text-stone-600 font-extrabold cursor-pointer uppercase tracking-wider">
-                🌿 Chemical Free Only
+                🌿 {t('chemicalFreeOnly')}
               </label>
             </div>
 
@@ -978,11 +1013,11 @@ export default function CatalogPage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-stone-500 gap-4">
                 <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-                <p className="font-bold text-sm">Harvesting orchard stock catalog...</p>
+                <p className="font-bold text-sm">{t('loadingCatalog')}</p>
               </div>
             ) : products.length === 0 ? (
               <div className="bg-white border border-stone-200/80 text-center py-20 rounded-3xl shadow-sm">
-                <p className="text-stone-500 text-lg font-bold">No premium mangoes match your selection filters.</p>
+                <p className="text-stone-500 text-lg font-bold">{t('noProductsFound')}</p>
                 <button 
                   onClick={() => {
                     setSearch('');
@@ -993,7 +1028,7 @@ export default function CatalogPage() {
                   }}
                   className="mt-4 bg-emerald-600 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition hover:bg-emerald-700 shadow"
                 >
-                  Clear Filters
+                  {t('clearFilters')}
                 </button>
               </div>
             ) : (
@@ -1011,32 +1046,32 @@ export default function CatalogPage() {
                     <div className="aspect-[4/3] bg-stone-100 relative overflow-hidden">
                       <img 
                         src={product.imageUrl?.[0] || 'https://images.unsplash.com/photo-1553279768-865429fa0078'} 
-                        alt={product.name}
+                        alt={tProductName(product.name, lang)}
                         className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
                       />
                       {product.isOrganic && (
                         <span className="absolute top-4 left-4 bg-emerald-600 text-white font-extrabold text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">
-                          🌿 Chemical Free
+                          🌿 {t('chemicalFree')}
                         </span>
                       )}
                       <span className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md text-[10px] text-stone-755 font-black px-2.5 py-1 rounded-lg shadow-sm border border-stone-200/50 flex items-center gap-1">
-                        📍 {product.originDistrict}
+                        📍 {tDistrict(product.originDistrict, lang)}
                       </span>
                     </div>
 
                     <div className="p-5 flex-grow flex flex-col gap-4">
                       <div className="flex-grow">
                         <h4 className="font-extrabold text-base text-stone-850 group-hover:text-emerald-700 transition leading-tight mb-2">
-                          {product.name}
+                          {tProductName(product.name, lang)}
                         </h4>
                         <p className="text-xs text-stone-500 leading-relaxed line-clamp-2 font-medium">
-                          {product.description}
+                          {tProductDesc(product.description, product.slug, lang)}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-stone-100 pt-4 mt-2">
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-stone-400 font-bold">Sweetness:</span>
+                          <span className="text-[10px] text-stone-400 font-bold">{t('sweetnessLabel')}</span>
                           <div className="flex text-amber-500">
                             {Array.from({ length: product.sweetness }).map((_, i) => (
                               <Star key={i} className="w-3 h-3 fill-current" />
@@ -1045,7 +1080,7 @@ export default function CatalogPage() {
                         </div>
                         
                         <span className="text-xs font-black text-emerald-600 group-hover:underline flex items-center gap-1">
-                          Select Box <ChevronRight className="w-3.5 h-3.5" />
+                          {t('selectBox')} <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </div>
                     </div>
@@ -1061,7 +1096,7 @@ export default function CatalogPage() {
       {currentView === 'product-detail' && !currentProduct && (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-          <p className="text-sm font-bold text-stone-500">Loading product details...</p>
+          <p className="text-sm font-bold text-stone-500">{t('loadingProductDetails')}</p>
         </div>
       )}
 
@@ -1075,11 +1110,11 @@ export default function CatalogPage() {
               onClick={() => setCurrentView('catalog')}
               className="text-xs font-black text-stone-500 hover:text-emerald-600 transition flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Orchard Catalog
+              <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
             </button>
             <div className="flex items-center gap-3">
               <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-200 shadow-sm flex items-center gap-1">
-                ✓ 100% Safe & Certified
+                ✓ {t('safeCertified')}
               </span>
             </div>
           </div>
@@ -1098,12 +1133,12 @@ export default function CatalogPage() {
                 
                 {currentProduct.isOrganic && (
                   <span className="absolute top-4 left-4 bg-emerald-600 text-white font-extrabold text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1">
-                    🌿 Chemical Free Ripened
+                    🌿 {t('chemicalFreeRipened')}
                   </span>
                 )}
                 
                 <span className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md text-xs text-stone-750 font-black px-3 py-1.5 rounded-lg border border-stone-200/60 shadow-sm">
-                  📍 Sourced: {currentProduct.originDistrict}
+                  📍 {t('sourcedLabel')} {tDistrict(currentProduct.originDistrict, lang)}
                 </span>
               </div>
 
@@ -1125,11 +1160,11 @@ export default function CatalogPage() {
             <div className="lg:col-span-6 flex flex-col gap-6">
               <div>
                 <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full w-max shadow-sm mb-2.5 inline-block">
-                  {currentProduct.category?.name || 'Sapahar Naogaon Select'}
+                  {tCategoryName(currentProduct.category?.name || 'Sapahar Naogaon Select', lang)}
                 </span>
                 
                 <h2 className="text-3xl font-black text-stone-850 tracking-tight leading-none mb-2">
-                  {currentProduct.name}
+                  {tProductName(currentProduct.name, lang)}
                 </h2>
                 
                 {/* Star reviews rating */}
@@ -1140,25 +1175,25 @@ export default function CatalogPage() {
                     ))}
                   </div>
                   <span className="text-xs font-bold text-stone-500">
-                    (5.0 based on {customReviews[currentProduct.slug]?.length || 1} verified customer reviews)
+                    (5.0 {t('ratingBasedOn').replace('{count}', String(customReviews[currentProduct.slug]?.length || 1))})
                   </span>
                 </div>
               </div>
 
               <div className="bg-white border border-stone-200/80 p-6 rounded-3xl shadow-sm">
                 <p className="text-xs text-stone-500 leading-relaxed font-semibold">
-                  {currentProduct.description}
+                  {tProductDesc(currentProduct.description, currentProduct.slug, lang)}
                 </p>
                 <div className="flex items-center gap-6 mt-4 pt-4 border-t border-stone-100">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-stone-400 font-extrabold uppercase">SWEETNESS RATIO</span>
+                    <span className="text-[10px] text-stone-400 font-extrabold uppercase">{t('sweetnessRatio')}</span>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="font-extrabold text-sm text-stone-800">{extraInfo.sugarPercentage}</span>
                       <span className="text-amber-500 text-xs">★</span>
                     </div>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-stone-400 font-extrabold uppercase">HARVEST TIMELINE</span>
+                    <span className="text-[10px] text-stone-400 font-extrabold uppercase">{t('harvestTimeline')}</span>
                     <span className="font-extrabold text-xs text-stone-800 mt-1">{extraInfo.timeline}</span>
                   </div>
                 </div>
@@ -1166,7 +1201,7 @@ export default function CatalogPage() {
 
               {/* Box Size / Price Options selector */}
               <div className="flex flex-col gap-3">
-                <h4 className="font-black text-xs text-stone-750 uppercase tracking-wider">Select Box Size (আমের পরিমাণ)</h4>
+                <h4 className="font-black text-xs text-stone-750 uppercase tracking-wider">{t('selectBoxSize')}</h4>
                 
                 <div className="flex flex-col gap-3">
                   {currentProduct.variants?.map((v: any) => {
@@ -1185,14 +1220,19 @@ export default function CatalogPage() {
                             weightKg: Number(v.weightKg),
                             boxCount: Number(v.boxCount || 1)
                           });
-                          showToast(`${v.weightKg}kg Box added to your basket!`, 'success');
+                          showToast(
+                            lang === 'bn' 
+                              ? `${v.weightKg}কেজি আমের বক্স বাস্কেটে যোগ করা হয়েছে!` 
+                              : `${v.weightKg}kg Box added to your basket!`, 
+                            'success'
+                          );
                           setCartOpen(true);
                         }}
                         className="bg-white border-2 border-stone-200 hover:border-emerald-600 rounded-2xl p-4 flex justify-between items-center cursor-pointer transition shadow-sm hover:shadow group relative overflow-hidden"
                       >
                         {isBestValue && (
                           <span className="absolute top-0 right-0 bg-amber-400 text-stone-950 font-black text-[8px] uppercase tracking-widest px-2.5 py-0.5 rounded-bl-lg shadow-sm">
-                            ★ Best Value
+                            ★ {t('bestValue')}
                           </span>
                         )}
                         <div className="flex items-center gap-3">
@@ -1200,8 +1240,8 @@ export default function CatalogPage() {
                             📦
                           </div>
                           <div>
-                            <h5 className="font-black text-sm text-stone-850">{v.weightKg} kg Premium Pack</h5>
-                            <p className="text-[10px] text-stone-400 font-semibold">Contains ~{v.boxCount * 2} to {v.boxCount * 5} pieces • Handpicked</p>
+                            <h5 className="font-black text-sm text-stone-850">{v.weightKg} {t('kg')} {t('premiumPack')}</h5>
+                            <p className="text-[10px] text-stone-400 font-semibold">{t('boxSizeDesc').replace('{min}', String(v.boxCount * 2)).replace('{max}', String(v.boxCount * 5))}</p>
                           </div>
                         </div>
                         <div className="text-right flex items-center gap-4">
@@ -1212,7 +1252,7 @@ export default function CatalogPage() {
                             )}
                           </div>
                           <span className="bg-emerald-600 text-white font-extrabold text-[10px] py-1.5 px-3 rounded-lg shadow-sm group-hover:bg-emerald-700 transition">
-                            Add +
+                            {t('addPlus')}
                           </span>
                         </div>
                       </div>
@@ -1228,19 +1268,19 @@ export default function CatalogPage() {
                     onClick={() => setActiveDetailTab('specs')}
                     className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${activeDetailTab === 'specs' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
                   >
-                    Specifications
+                    {t('specsTab')}
                   </button>
                   <button 
                     onClick={() => setActiveDetailTab('story')}
                     className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${activeDetailTab === 'story' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
                   >
-                    Orchard Story
+                    {t('storyTab')}
                   </button>
                   <button 
                     onClick={() => setActiveDetailTab('reviews')}
                     className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${activeDetailTab === 'reviews' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
                   >
-                    Reviews ({customReviews[currentProduct.slug]?.length || 0})
+                    {t('reviewsTab').replace('{count}', String(customReviews[currentProduct.slug]?.length || 0))}
                   </button>
                 </div>
 
@@ -1250,8 +1290,8 @@ export default function CatalogPage() {
                     <div className="flex flex-col gap-2.5">
                       {extraInfo.specifications.map((spec, sIdx) => (
                         <div key={sIdx} className="flex justify-between items-center text-xs py-1.5 border-b border-stone-100 last:border-b-0">
-                          <span className="text-stone-400 font-bold">{spec.label}</span>
-                          <span className="text-stone-750 font-extrabold">{spec.value}</span>
+                          <span className="text-stone-400 font-bold">{tSpecLabel(spec.label, lang)}</span>
+                          <span className="text-stone-750 font-extrabold">{tSpecValue(spec.value, lang)}</span>
                         </div>
                       ))}
                     </div>
@@ -1259,14 +1299,14 @@ export default function CatalogPage() {
 
                   {activeDetailTab === 'story' && (
                     <div className="flex flex-col gap-3">
-                      <h5 className="font-extrabold text-sm text-stone-800">🌳 Farm: {extraInfo.farmName}</h5>
+                      <h5 className="font-extrabold text-sm text-stone-800">🌳 {t('reviewFarmLabel')} {tFarmName(extraInfo.farmName, lang)}</h5>
                       <p className="text-xs text-stone-500 leading-relaxed font-semibold">
-                        {extraInfo.farmStory}
+                        {tFarmStory(extraInfo.farmStory, lang)}
                       </p>
                       <div className="p-3.5 bg-stone-50 border border-stone-200/70 rounded-2xl flex items-center gap-3 mt-1.5">
                         <span className="text-lg">🌿</span>
                         <div className="text-[10px] text-stone-500 font-semibold leading-relaxed">
-                          GPS location verified. Ripened naturally wrapped inside eco-friendly paper. Chemical tests cleared.
+                          {t('reviewGPSDesc')}
                         </div>
                       </div>
                     </div>
@@ -1274,7 +1314,6 @@ export default function CatalogPage() {
 
                   {activeDetailTab === 'reviews' && (
                     <div className="flex flex-col gap-6">
-                      
                       {/* Reviews List */}
                       <div className="flex flex-col gap-4 max-h-[220px] overflow-y-auto pr-1">
                         {(customReviews[currentProduct.slug] || []).map((rev, rIdx) => (
@@ -1284,7 +1323,7 @@ export default function CatalogPage() {
                                 <span className="font-extrabold text-xs text-stone-800">{rev.name}</span>
                                 {rev.verified && (
                                   <span className="text-[8px] bg-emerald-50 text-emerald-700 font-black tracking-widest uppercase px-1.5 py-0.5 rounded border border-emerald-100">
-                                    ✓ Verified Buyer
+                                    ✓ {lang === 'bn' ? 'যাচাইকৃত ক্রেতা' : 'Verified Buyer'}
                                   </span>
                                 )}
                               </div>
@@ -1302,11 +1341,11 @@ export default function CatalogPage() {
 
                       {/* Add simulated Review Form */}
                       <form onSubmit={(e) => submitReview(e, currentProduct.slug)} className="border-t border-stone-100 pt-4 flex flex-col gap-3">
-                        <h5 className="font-extrabold text-xs text-stone-750 uppercase tracking-wider">Leave an Orchard Review</h5>
+                        <h5 className="font-extrabold text-xs text-stone-750 uppercase tracking-wider">{t('leaveReview')}</h5>
                         
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] text-stone-400 font-bold">Your Name</label>
+                            <label className="text-[10px] text-stone-400 font-bold">{t('yourNameLabel')}</label>
                             <input 
                               type="text" 
                               required
@@ -1318,27 +1357,27 @@ export default function CatalogPage() {
                           </div>
 
                           <div className="flex flex-col gap-1">
-                            <label className="text-[10px] text-stone-400 font-bold">Rating</label>
+                            <label className="text-[10px] text-stone-400 font-bold">{t('ratingLabel')}</label>
                             <select 
                               value={reviewRating}
                               onChange={(e) => setReviewRating(Number(e.target.value))}
                               className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600 text-stone-750 font-bold"
                             >
-                              <option value="5">5 Stars (Excellent)</option>
-                              <option value="4">4 Stars (Very Good)</option>
-                              <option value="3">3 Stars (Good)</option>
+                              <option value="5">{t('ratingExcellent')}</option>
+                              <option value="4">{t('ratingVeryGood')}</option>
+                              <option value="3">{t('ratingGood')}</option>
                             </select>
                           </div>
                         </div>
 
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-stone-400 font-bold">Your Comment</label>
+                          <label className="text-[10px] text-stone-400 font-bold">{t('yourCommentLabel')}</label>
                           <textarea 
                             required
                             rows={2}
                             value={reviewComment}
                             onChange={(e) => setReviewComment(e.target.value)}
-                            placeholder="Share your experience with straw-ripened freshness..."
+                            placeholder={t('commentPlaceholder')}
                             className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600 text-stone-750 font-medium"
                           />
                         </div>
@@ -1347,7 +1386,7 @@ export default function CatalogPage() {
                           type="submit"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2 px-4 rounded-xl shadow-sm transition self-end"
                         >
-                          Publish Verified Review
+                          {t('publishReviewBtn')}
                         </button>
                       </form>
 
@@ -1371,7 +1410,7 @@ export default function CatalogPage() {
             onClick={() => setCurrentView('catalog')}
             className="text-xs font-black text-stone-500 hover:text-emerald-600 transition flex items-center gap-1.5 self-start"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Orchard Catalog
+            <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
           </button>
 
           <div className="bg-white border border-stone-200/80 rounded-3xl p-6 md:p-8 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -1379,12 +1418,12 @@ export default function CatalogPage() {
             {/* Left: Guest Billing details form */}
             <form onSubmit={handleCheckoutSubmit} className="md:col-span-7 flex flex-col gap-5">
               <div>
-                <h3 className="font-black text-xl text-stone-850 mb-1">Billing & Delivery Details</h3>
-                <p className="text-[11px] text-stone-450 font-semibold uppercase tracking-wider">ঝামেলাহীন অর্ডার করতে আপনার তথ্য দিন (মোবাইল নম্বরটি সচল রাখুন)</p>
+                <h3 className="font-black text-xl text-stone-850 mb-1">{t('checkoutTitle')}</h3>
+                <p className="text-[11px] text-stone-450 font-semibold uppercase tracking-wider">{t('checkoutDesc')}</p>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Your Full Name (আপনার নাম)</label>
+                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('fullNameLabel')}</label>
                 <input 
                   type="text"
                   required
@@ -1396,80 +1435,80 @@ export default function CatalogPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Mobile Number (মোবাইল নম্বর)</label>
+                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('phoneLabel')}</label>
                 <input 
                   type="tel"
                   required
                   value={billingPhone}
                   onChange={(e) => setBillingPhone(e.target.value)}
-                  placeholder="e.g. 017XXXXXXXX"
+                  placeholder={t('phonePlaceholder')}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-800 font-bold focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">District (জেলা)</label>
+                  <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('districtLabel')}</label>
                   <select
                     value={billingDistrict}
                     onChange={(e) => setBillingDistrict(e.target.value)}
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-800 font-bold focus:outline-none focus:border-emerald-600 transition cursor-pointer"
                   >
-                    <option value="Dhaka">Dhaka (ঢাকা)</option>
-                    <option value="Rajshahi">Rajshahi (রাজশাহী)</option>
-                    <option value="Naogaon">Naogaon (নওগাঁ)</option>
-                    <option value="Chittagong">Chittagong (চট্টগ্রাম)</option>
-                    <option value="Sylhet">Sylhet (সিলেট)</option>
+                    <option value="Dhaka">{tDistrict('Dhaka', lang)}</option>
+                    <option value="Rajshahi">{tDistrict('Rajshahi', lang)}</option>
+                    <option value="Naogaon">{tDistrict('Naogaon', lang)}</option>
+                    <option value="Chittagong">{tDistrict('Chittagong', lang)}</option>
+                    <option value="Sylhet">{tDistrict('Sylhet', lang)}</option>
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Delivery Slot (সময়)</label>
+                  <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('deliverySlotLabel')}</label>
                   <select
                     value={billingDeliverySlot}
                     onChange={(e) => setBillingDeliverySlot(e.target.value)}
                     className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-800 font-bold focus:outline-none focus:border-emerald-600 transition cursor-pointer"
                   >
-                    <option value="MORNING">Morning (সকাল ৯টা - দুপুর ১টা)</option>
-                    <option value="AFTERNOON">Afternoon (দুপুর ২টা - বিকাল ৬টা)</option>
+                    <option value="MORNING">{t('slotMorning')}</option>
+                    <option value="AFTERNOON">{t('slotAfternoon')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Detailed Shipping Address (সম্পূর্ণ ঠিকানা)</label>
+                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('addressLabel')}</label>
                 <textarea 
                   required
                   rows={2}
                   value={billingAddress}
                   onChange={(e) => setBillingAddress(e.target.value)}
-                  placeholder="Road Number, House/Flat, Area details..."
+                  placeholder={t('addressPlaceholder')}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-800 font-medium focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Delivery Notes (ঐচ্ছিক নির্দেশনা)</label>
+                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('notesLabel')}</label>
                 <textarea 
                   rows={1}
                   value={billingNotes}
                   onChange={(e) => setBillingNotes(e.target.value)}
-                  placeholder="Gate code, alternative contact etc..."
+                  placeholder={t('notesPlaceholder')}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-800 font-medium focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
               {/* Payment Gateways selection */}
               <div className="flex flex-col gap-2.5">
-                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Payment Method (পেমেন্ট পদ্ধতি)</label>
+                <label className="text-[10px] text-stone-400 font-black uppercase tracking-wider">{t('paymentMethodLabel')}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setBillingPaymentGateway('COD')}
                     className={`py-3 rounded-2xl border text-xs font-black transition flex flex-col items-center gap-1 shadow-sm ${billingPaymentGateway === 'COD' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-stone-50 border-stone-200 text-stone-500'}`}
                   >
-                    <span>💵 Cash on Delivery</span>
-                    <span className="text-[8px] font-bold text-stone-400">ডেলিভারি পেয়ে টাকা দিন</span>
+                    <span>{t('paymentCodTitle')}</span>
+                    <span className="text-[8px] font-bold text-stone-400">{t('paymentCodDesc')}</span>
                   </button>
 
                   <button
@@ -1477,8 +1516,8 @@ export default function CatalogPage() {
                     onClick={() => setBillingPaymentGateway('BKASH')}
                     className={`py-3 rounded-2xl border text-xs font-black transition flex flex-col items-center gap-1 shadow-sm ${billingPaymentGateway === 'BKASH' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-stone-50 border-stone-200 text-stone-500'}`}
                   >
-                    <span>📱 bKash / Online Payment</span>
-                    <span className="text-[8px] font-bold text-stone-400">অনলাইন পেমেন্ট করুন</span>
+                    <span>{t('paymentBkashTitle')}</span>
+                    <span className="text-[8px] font-bold text-stone-400">{t('paymentBkashDesc')}</span>
                   </button>
                 </div>
               </div>
@@ -1490,11 +1529,11 @@ export default function CatalogPage() {
               >
                 {checkoutLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Verification & checkout...
+                    <RefreshCw className="w-4 h-4 animate-spin" /> {lang === 'bn' ? 'যাচাই ও অর্ডার প্রসেস হচ্ছে...' : 'Verification & checkout...'}
                   </>
                 ) : (
                   <>
-                    Confirm Order (অর্ডার সম্পন্ন করুন) <ArrowRight className="w-4 h-4" />
+                    {t('confirmOrderBtn')} <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
@@ -1504,8 +1543,8 @@ export default function CatalogPage() {
             {/* Right: Checkout Items summary calculation */}
             <div className="md:col-span-5 flex flex-col gap-5 border-l border-stone-200/80 pl-0 md:pl-8">
               <div>
-                <h4 className="font-black text-base text-stone-850 mb-1">Basket Summary</h4>
-                <p className="text-[10px] text-stone-400 font-extrabold uppercase">Items in order</p>
+                <h4 className="font-black text-base text-stone-850 mb-1">{t('basketSummaryTitle')}</h4>
+                <p className="text-[10px] text-stone-400 font-extrabold uppercase">{t('basketSummaryDesc')}</p>
               </div>
 
               {/* Items List */}
@@ -1517,11 +1556,11 @@ export default function CatalogPage() {
                     <div key={item.variantId} className="flex justify-between items-center gap-3 py-2 border-b border-stone-100 last:border-0">
                       <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-xl bg-stone-100 overflow-hidden border border-stone-200/50 flex-shrink-0">
-                          <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                          <img src={imageUrl} alt={tProductName(item.name, lang)} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <h5 className="font-extrabold text-xs text-stone-850 line-clamp-1">{item.name}</h5>
-                          <p className="text-[10px] text-stone-400 font-semibold">{item.weightKg} kg Pack × {item.quantity}</p>
+                          <h5 className="font-extrabold text-xs text-stone-850 line-clamp-1">{tProductName(item.name, lang)}</h5>
+                          <p className="text-[10px] text-stone-400 font-semibold">{item.weightKg} {t('kg')} {lang === 'bn' ? 'প্যাক' : 'Pack'} × {item.quantity}</p>
                         </div>
                       </div>
                       <span className="font-black text-xs text-stone-900 flex-shrink-0">
@@ -1534,11 +1573,11 @@ export default function CatalogPage() {
 
               {/* Applied Coupon view */}
               <div className="flex flex-col gap-1.5 border-t border-stone-100 pt-4">
-                <label className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Coupon Code (Try: MANGO10)</label>
+                <label className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">{t('couponLabel')}</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    placeholder="Coupon Code"
+                    placeholder={t('couponPlaceholder')}
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
                     className="flex-grow bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-1.5 text-xs text-stone-800 font-bold focus:outline-none focus:border-emerald-600"
@@ -1546,34 +1585,34 @@ export default function CatalogPage() {
                   <button 
                     type="button"
                     onClick={checkCoupon}
-                    className="bg-stone-100 border border-stone-200 hover:bg-stone-200 text-stone-700 text-xs px-4 rounded-xl font-bold transition shadow-sm"
+                    className="bg-stone-100 border border-stone-200 hover:bg-stone-200 text-stone-770 text-xs px-4 rounded-xl font-bold transition shadow-sm"
                   >
-                    Apply
+                    {t('couponApplyBtn')}
                   </button>
                 </div>
                 {appliedCoupon && (
-                  <span className="text-emerald-600 font-bold text-[10px] mt-1 flex items-center gap-1">✓ Applied: {appliedCoupon}</span>
+                  <span className="text-emerald-600 font-bold text-[10px] mt-1 flex items-center gap-1">✓ {t('couponApplied').replace('{code}', appliedCoupon)}</span>
                 )}
               </div>
 
               {/* Pricing ledger */}
               <div className="bg-stone-50 border border-stone-200/80 p-4 rounded-2xl flex flex-col gap-2.5 mt-2">
                 <div className="flex justify-between text-xs text-stone-500 font-medium">
-                  <span>Subtotal:</span>
+                  <span>{t('checkoutSubtotal')}</span>
                   <span className="font-bold text-stone-850">{getSubtotal()} BDT</span>
                 </div>
                 <div className="flex justify-between text-xs text-stone-500 font-medium">
-                  <span>Delivery Charge:</span>
+                  <span>{t('checkoutDeliveryCharge')}</span>
                   <span className="font-bold text-stone-850">{getShippingCharge()} BDT</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-xs text-emerald-600 font-bold">
-                    <span>Coupon Saved:</span>
+                    <span>{t('checkoutCouponSaved')}</span>
                     <span>-{discountAmount} BDT</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-black text-stone-850 pt-2 border-t border-stone-200/80">
-                  <span>Total Bill Amount:</span>
+                  <span>{t('checkoutTotal')}</span>
                   <span className="text-emerald-700 text-base">{getSubtotal() - discountAmount + getShippingCharge()} BDT</span>
                 </div>
               </div>
@@ -1597,7 +1636,7 @@ export default function CatalogPage() {
             <div className="flex justify-between items-center border-b border-stone-100 pb-4">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-black text-lg text-stone-850">Your Shopping Basket</h3>
+                <h3 className="font-black text-lg text-stone-850">{t('basketTitle')}</h3>
               </div>
               <button 
                 onClick={() => setCartOpen(false)}
@@ -1611,14 +1650,14 @@ export default function CatalogPage() {
               <div className="flex-grow flex flex-col items-center justify-center text-center gap-4 text-stone-400">
                 <span className="text-5xl">🛍️</span>
                 <div>
-                  <h4 className="font-bold text-sm text-stone-750">Your basket is empty.</h4>
-                  <p className="text-xs text-stone-500 font-medium mt-1">Add raw organic fresh mango packs to get started.</p>
+                  <h4 className="font-bold text-sm text-stone-750">{t('basketEmpty')}</h4>
+                  <p className="text-xs text-stone-500 font-medium mt-1">{t('basketEmptyDesc')}</p>
                 </div>
                 <button 
                   onClick={() => { setCartOpen(false); setCurrentView('catalog'); }}
                   className="bg-emerald-600 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl transition hover:bg-emerald-700 shadow"
                 >
-                  Shop Mangoes
+                  {t('shopMangoes')}
                 </button>
               </div>
             ) : (
@@ -1636,11 +1675,11 @@ export default function CatalogPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl bg-stone-100 overflow-hidden border border-stone-200/30 flex-shrink-0">
-                            <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                            <img src={imageUrl} alt={tProductName(item.name, lang)} className="w-full h-full object-cover" />
                           </div>
                           <div>
-                            <h4 className="font-black text-xs text-stone-850 line-clamp-1">{item.name}</h4>
-                            <p className="text-[10px] text-stone-400 font-semibold mb-1">{item.weightKg} kg Pack</p>
+                            <h4 className="font-black text-xs text-stone-850 line-clamp-1">{tProductName(item.name, lang)}</h4>
+                            <p className="text-[10px] text-stone-400 font-semibold mb-1">{item.weightKg} {t('kg')} {lang === 'bn' ? 'প্যাক' : 'Pack'}</p>
                             <div className="flex items-center gap-2">
                               <button 
                                 onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))}
@@ -1678,7 +1717,7 @@ export default function CatalogPage() {
                 {/* Calculations ledger & CTA */}
                 <div className="border-t border-stone-100 pt-4 flex flex-col gap-4 bg-white">
                   <div className="flex justify-between text-xs text-stone-500 font-bold bg-stone-50 p-4 rounded-xl shadow-sm">
-                    <span>Cart Subtotal (মোট বিল):</span>
+                    <span>{lang === 'bn' ? 'কার্ট সাবটোটাল (মোট বিল):' : 'Cart Subtotal:'}</span>
                     <span className="text-stone-900 text-sm font-black">{getSubtotal()} BDT</span>
                   </div>
 
@@ -1689,7 +1728,7 @@ export default function CatalogPage() {
                     }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-2xl text-xs flex items-center justify-center gap-1.5 transition shadow shadow-emerald-500/10 hover:shadow-lg"
                   >
-                    Proceed to Guest Checkout <ArrowRight className="w-4 h-4" />
+                    {lang === 'bn' ? 'গেস্ট চেকাউটে এগিয়ে যান' : 'Proceed to Guest Checkout'} <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -1707,20 +1746,20 @@ export default function CatalogPage() {
       <footer className="border-t border-stone-200 bg-white py-12 px-6 text-center text-xs text-stone-500 mt-auto shadow-inner">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-left flex flex-col gap-1">
-            <h4 className="font-extrabold text-sm text-stone-800">MangoVaiya Orchard Direct</h4>
+            <h4 className="font-extrabold text-sm text-stone-800">{t('footerBrand')}</h4>
             <p className="font-medium text-stone-450 leading-relaxed max-w-sm">
-              Sourcing safe, organic, naturally straw-ripened premium mangoes directly from cooperative grower alliances in Sapahar, Naogaon and Rajshahi.
+              {t('footerDesc')}
             </p>
           </div>
           <div className="text-right flex flex-col gap-1 items-end">
-            <p className="font-bold text-stone-600">Hotline Support: +880 1906 933600 • info@mangovaiya.com</p>
+            <p className="font-bold text-stone-600">{t('footerContact')}</p>
             <p className="font-extrabold text-[10px] text-stone-400 uppercase tracking-widest mt-1">
-              Rajshahi • Sapahar, Naogaon • Dhaka express shipping
+              {t('footerLocations')}
             </p>
           </div>
         </div>
         <p className="text-[10px] text-stone-400 font-semibold border-t border-stone-100 pt-6 mt-6">
-          © 2026 MangoVaiya Organic Sourcing Inc. All rights reserved. Designed for safe, chemical-free direct purchase.
+          {t('footerCopyright')}
         </p>
       </footer>
 

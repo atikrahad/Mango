@@ -67,7 +67,7 @@ export class CatalogService {
       this.prisma.product.count({ where }),
     ]);
 
-    const mappedProducts = products.map((p) => this.mapProductImage(p));
+    const mappedProducts = products.map((p: any) => this.mapProductImage(p));
 
     return {
       success: true,
@@ -254,7 +254,7 @@ export class CatalogService {
       throw new BadRequestException('A product variant with this SKU already exists.');
     }
 
-    const variant = await this.prisma.$transaction(async (tx) => {
+    const variant = await this.prisma.$transaction(async (tx: any) => {
       const newVariant = await tx.productVariant.create({
         data: {
           productId,
@@ -304,7 +304,7 @@ export class CatalogService {
       }
     }
 
-    const updatedVariant = await this.prisma.$transaction(async (tx) => {
+    const updatedVariant = await this.prisma.$transaction(async (tx: any) => {
       const data: any = {};
       if (sku !== undefined) data.sku = sku;
       if (weightKg !== undefined) data.weightKg = Number(weightKg);
