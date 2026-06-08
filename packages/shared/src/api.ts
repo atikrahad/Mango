@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { AuthStore } from './authStore';
 
 export const createApiClient = (authStore: AuthStore): AxiosInstance => {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ambari-api.vercel.app/api/v1';
 
   const api = axios.create({
     baseURL: API_URL,

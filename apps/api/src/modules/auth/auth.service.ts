@@ -114,19 +114,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
     this.setRefreshTokenCookie(response, tokens.refreshToken);
 
-    return {
-      success: true,
-      data: {
-        accessToken: tokens.accessToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-          role: user.role,
-          referralCode: user.affiliateProfile?.referralCode,
-        },
-      },
-    };
+    return this.formatLoginResponse(user, tokens.accessToken);
   }
 
   async refresh(refreshToken: string, response: Response) {
@@ -164,19 +152,7 @@ export class AuthService {
       const tokens = await this.generateTokens(user);
       this.setRefreshTokenCookie(response, tokens.refreshToken);
 
-      return {
-        success: true,
-        data: {
-          accessToken: tokens.accessToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            role: user.role,
-            referralCode: user.affiliateProfile?.referralCode,
-          },
-        },
-      };
+      return this.formatLoginResponse(user, tokens.accessToken);
     } catch (e) {
       throw new UnauthorizedException({
         success: false,
@@ -225,5 +201,21 @@ export class AuthService {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/api/v1/auth/refresh', // only sent to refresh endpoint
     });
+  }
+
+  private formatLoginResponse(user: any, accessToken: string) {
+    return {
+      success: true,
+      data: {
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          referralCode: user.affiliateProfile?.referralCode,
+        },
+      },
+    };
   }
 }
