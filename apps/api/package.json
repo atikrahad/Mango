@@ -31,7 +31,9 @@
     "reflect-metadata": "^0.2.2",
     "@types/cookie-parser": "^1.4.10",
     "bcrypt": "^5.1.1",
-    "cookie-parser": "^1.4.7"
+    "cookie-parser": "^1.4.7",
+    "class-validator": "^0.14.1",
+    "class-transformer": "^0.5.1"
   },
   "devDependencies": {
     "typescript-eslint": "^8.20.0",
