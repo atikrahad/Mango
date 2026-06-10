@@ -5,6 +5,7 @@
   "description": "Enterprise Mango E-Commerce & Affiliate Platform",
   "scripts": {
     "dev": "turbo run dev",
+    "start": "turbo run start:prod",
     "postinstall": "npm run db:generate",
     "build": "npm run db:generate && npx prisma db push --schema=packages/database/prisma/schema.prisma && turbo run build",
     "lint": "turbo run lint",
