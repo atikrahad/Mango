@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { AuthStore } from './authStore';
 
 export const createApiClient = (authStore: AuthStore): AxiosInstance => {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ambari-api.vercel.app/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://144.79.249.166:4000/api/v1' || 'http://localhost:4000/api/v1';
 
   const api = axios.create({
     baseURL: API_URL,
@@ -39,7 +39,7 @@ export const createApiClient = (authStore: AuthStore): AxiosInstance => {
 
           if (response.data?.success && response.data?.data?.accessToken) {
             const { accessToken, user } = response.data.data;
-            
+
             authStore.getState().setSession(accessToken, user);
 
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
