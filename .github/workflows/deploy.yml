@@ -21,8 +21,6 @@ jobs:
         run: npm ci
 
       - name: Build
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run build
 
       # ---------------- WEB ----------------
@@ -55,6 +53,10 @@ jobs:
           rsync -av --delete apps/api/package.json /var/www/api/package.json
           rsync -av --delete apps/api/dist/ /var/www/api/dist/
           rsync -avL --delete node_modules/ /var/www/api/node_modules/
+          
+          # Run database schema push using the production .env file in /var/www/api
+          cd /var/www/api
+          npx prisma db push --schema=node_modules/@mangosteen/database/prisma/schema.prisma --accept-data-loss
 
       # ---------------- PM2 SAFE START ----------------
       - name: Start or Reload PM2

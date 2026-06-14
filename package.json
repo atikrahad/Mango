@@ -7,7 +7,7 @@
     "dev": "turbo run dev",
     "start": "turbo run start:prod",
     "postinstall": "npm run db:generate",
-    "build": "npm run db:generate && npx prisma db push --schema=packages/database/prisma/schema.prisma && turbo run build",
+    "build": "npm run db:generate && turbo run build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:generate": "npm run generate --workspace=@mangosteen/database",
