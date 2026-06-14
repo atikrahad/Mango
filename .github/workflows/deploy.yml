@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: mango-runner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run build
+
+      # ---------------- WEB ----------------
+      - name: Deploy Web
+        run: |
+          mkdir -p /var/www/web
+          # Copy Next.js standalone build server, resolved dependencies, and static assets
+          rsync -av --delete apps/web/.next/standalone/apps/web/ /var/www/web/
+          rsync -av --delete apps/web/.next/standalone/node_modules/ /var/www/web/node_modules/
+          rsync -av --delete apps/web/.next/standalone/packages/ /var/www/web/packages/
+          rsync -av --delete apps/web/.next/static/ /var/www/web/.next/static/
+          rsync -av --delete apps/web/public/ /var/www/web/public/
+
+      # ---------------- ADMIN ----------------
+      - name: Deploy Admin
+        run: |
+          mkdir -p /var/www/admin
+          # Copy Next.js standalone build server, resolved dependencies, and static assets
+          rsync -av --delete apps/admin/.next/standalone/apps/admin/ /var/www/admin/
+          rsync -av --delete apps/admin/.next/standalone/node_modules/ /var/www/admin/node_modules/
+          rsync -av --delete apps/admin/.next/standalone/packages/ /var/www/admin/packages/
+          rsync -av --delete apps/admin/.next/static/ /var/www/admin/.next/static/
+          rsync -av --delete apps/admin/public/ /var/www/admin/public/
+
+      # ---------------- API ----------------
+      - name: Deploy API
+        run: |
+          mkdir -p /var/www/api
+          # Copy NestJS build, package.json, and fully resolve workspace symlinks into physical directories
+          rsync -av --delete apps/api/package.json /var/www/api/package.json
+          rsync -av --delete apps/api/dist/ /var/www/api/dist/
+          rsync -avL --delete node_modules/ /var/www/api/node_modules/
+
+      # ---------------- PM2 SAFE START ----------------
+      - name: Start or Reload PM2
+        run: |
+          pm2 describe web >/dev/null 2>&1 && pm2 reload web || pm2 start server.js --name web --cwd /var/www/web
+          pm2 describe admin >/dev/null 2>&1 && pm2 reload admin || pm2 start server.js --name admin --cwd /var/www/admin
+          pm2 describe api >/dev/null 2>&1 && pm2 reload api || pm2 start dist/apps/api/src/main.js --name api --cwd /var/www/api
+
+          pm2 save

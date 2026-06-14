@@ -57,11 +57,8 @@ async function main() {
   console.log(`📁 Category seeded: ${catOrganic.name}`);
 
   // 3. Create Products & Variants
-  const himsagar = await prisma.product.upsert({
-    where: { slug: 'himsagar-premium' },
-    update: {},
-    create: {
-      categoryId: catOrganic.id,
+  const mangoesToSeed = [
+    {
       name: 'Premium Himsagar Mangoes',
       slug: 'himsagar-premium',
       description: 'Himsagar is a popular mango cultivar. It is known for its sweet aroma and fiberless pulpy texture.',
@@ -71,14 +68,10 @@ async function main() {
       imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
       seoTitle: 'Buy Premium Himsagar Mangoes Online | Direct Farm Delivery',
       seoDesc: 'Savor the authentic taste of Naogaon with fiberless, naturally sweetened premium Himsagar mangoes.',
+      basePricePerKg: 160.0,
+      skuCode: 'HIM',
     },
-  });
-
-  const langra = await prisma.product.upsert({
-    where: { slug: 'langra-special' },
-    update: {},
-    create: {
-      categoryId: catOrganic.id,
+    {
       name: 'Orchard Special Langra Mangoes',
       slug: 'langra-special',
       description: 'Langra is highly appreciated for its sweet, slightly acidic taste and smooth texture.',
@@ -88,60 +81,128 @@ async function main() {
       imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
       seoTitle: 'Buy Farm Fresh Langra Mangoes Online | Sapahar Naogaon Orchard',
       seoDesc: 'Original sweet and tangy Langra mangoes direct from Sapahar, Naogaon. Order online today!',
+      basePricePerKg: 140.0,
+      skuCode: 'LAN',
     },
-  });
-  console.log(`🥭 Mango Products seeded: ${himsagar.name}, ${langra.name}`);
+    {
+      name: 'Gopalbhog Sweet Mangoes',
+      slug: 'gopalbhog-sweet',
+      description: 'Gopalbhog is one of the earliest mango varieties of the season, famous for its rich yellow color and extremely sweet flavor.',
+      sweetness: 5,
+      isOrganic: true,
+      originDistrict: 'Rajshahi',
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
+      seoTitle: 'Buy Rajshahi Gopalbhog Mangoes Online | Fresh Orchard Pickup',
+      seoDesc: 'Authentic early season Gopalbhog mangoes from Rajshahi. Rich color, sweet taste, order now!',
+      basePricePerKg: 150.0,
+      skuCode: 'GOP',
+    },
+    {
+      name: 'Rangpur Haribhanga Mangoes',
+      slug: 'haribhanga-rangpur',
+      description: 'Haribhanga is a highly popular mid-season mango with a round shape, fiberless pulp, and delightful sweetness.',
+      sweetness: 4,
+      isOrganic: true,
+      originDistrict: 'Rangpur',
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
+      seoTitle: 'Buy Rangpur Haribhanga Mangoes Online | Direct from Orchards',
+      seoDesc: 'Get fresh, fiberless Haribhanga mangoes from Rangpur. Naturally ripened, sweet & fleshy.',
+      basePricePerKg: 130.0,
+      skuCode: 'HAR',
+    },
+    {
+      name: 'Premium Amrapali Mangoes',
+      slug: 'amrapali-premium',
+      description: 'Amrapali is a late-season hybrid mango famous for its deep orange-red pulp, rich flavor, and sweet fragrance.',
+      sweetness: 5,
+      isOrganic: true,
+      originDistrict: 'Naogaon',
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
+      seoTitle: 'Buy Premium Amrapali Mangoes Online | Farm Delivery',
+      seoDesc: 'Indulge in sweet, rich deep orange-red pulp Amrapali mangoes direct from Naogaon orchards.',
+      basePricePerKg: 140.0,
+      skuCode: 'AMP',
+    },
+    {
+      name: 'Giant Fazli Mangoes',
+      slug: 'fazli-giant',
+      description: 'Fazli is a late-season large mango variety, appreciated for its generous pulp size, sweet and slightly tangy flavor.',
+      sweetness: 4,
+      isOrganic: true,
+      originDistrict: 'Chapainawabganj',
+      imageUrl: '["https://images.unsplash.com/photo-1553279768-865429fa0078"]',
+      seoTitle: 'Buy Giant Fazli Mangoes Online | Late Season Special',
+      seoDesc: 'Try the giant, pulpy Fazli mangoes from Chapainawabganj. Perfect for desserts and direct eating.',
+      basePricePerKg: 100.0,
+      skuCode: 'FAZ',
+    }
+  ];
 
-  // 4. Seed Product Variants & Inventory
-  const variantHimsagar5 = await prisma.productVariant.upsert({
-    where: { sku: 'MNG-HIM-05K-ORG' },
-    update: {},
-    create: {
-      productId: himsagar.id,
-      sku: 'MNG-HIM-05K-ORG',
-      weightKg: 5.0,
-      boxCount: 1,
-      price: 1500.0,
-      discount: 100.0,
-    },
-  });
+  const seededProducts = [];
 
-  await prisma.inventory.upsert({
-    where: { variantId: variantHimsagar5.id },
-    update: {},
-    create: {
-      variantId: variantHimsagar5.id,
-      availableStock: 250,
-      batchNumber: 'BATCH-2026-HIM01',
-      harvestDate: new Date(),
-      shelfLifeDays: 12,
-    },
-  });
+  for (const m of mangoesToSeed) {
+    const product = await prisma.product.upsert({
+      where: { slug: m.slug },
+      update: {},
+      create: {
+        categoryId: catOrganic.id,
+        name: m.name,
+        slug: m.slug,
+        description: m.description,
+        sweetness: m.sweetness,
+        isOrganic: m.isOrganic,
+        originDistrict: m.originDistrict,
+        imageUrl: m.imageUrl,
+        seoTitle: m.seoTitle,
+        seoDesc: m.seoDesc,
+      },
+    });
+    seededProducts.push(product);
+    console.log(`🥭 Mango Product seeded: ${product.name}`);
 
-  const variantLangra5 = await prisma.productVariant.upsert({
-    where: { sku: 'MNG-LAN-05K-ORG' },
-    update: {},
-    create: {
-      productId: langra.id,
-      sku: 'MNG-LAN-05K-ORG',
-      weightKg: 5.0,
-      boxCount: 1,
-      price: 1300.0,
-    },
-  });
+    // Create 4 variants for each: 5kg, 10kg, 20kg, 40kg
+    const sizes = [
+      { weight: 5.0, discountFactor: 1.0, stock: 300, boxCount: 1 },
+      { weight: 10.0, discountFactor: 0.95, stock: 200, boxCount: 1 },
+      { weight: 20.0, discountFactor: 0.90, stock: 100, boxCount: 2 }, // 2 boxes of 10kg each
+      { weight: 40.0, discountFactor: 0.85, stock: 50, boxCount: 4 },  // 4 boxes of 10kg each
+    ];
 
-  await prisma.inventory.upsert({
-    where: { variantId: variantLangra5.id },
-    update: {},
-    create: {
-      variantId: variantLangra5.id,
-      availableStock: 400,
-      batchNumber: 'BATCH-2026-LAN01',
-      harvestDate: new Date(),
-      shelfLifeDays: 14,
-    },
-  });
-  console.log('📦 Product Variants & Inventory records seeded.');
+    for (const size of sizes) {
+      // Round to nearest 10 for neat pricing
+      const rawPrice = size.weight * m.basePricePerKg * size.discountFactor;
+      const finalPrice = Math.round(rawPrice / 10) * 10;
+      
+      const weightStr = size.weight < 10 ? `0${size.weight}` : `${size.weight}`;
+      const sku = `MNG-${m.skuCode}-${weightStr}K-ORG`;
+
+      const variant = await prisma.productVariant.upsert({
+        where: { sku: sku },
+        update: {},
+        create: {
+          productId: product.id,
+          sku: sku,
+          weightKg: size.weight,
+          boxCount: size.boxCount,
+          price: finalPrice,
+          discount: 0.0,
+        },
+      });
+
+      await prisma.inventory.upsert({
+        where: { variantId: variant.id },
+        update: {},
+        create: {
+          variantId: variant.id,
+          availableStock: size.stock,
+          batchNumber: `BATCH-2026-${m.skuCode}-${weightStr}K`,
+          harvestDate: new Date(),
+          shelfLifeDays: 14,
+        },
+      });
+    }
+    console.log(`📦 Variants (5kg, 10kg, 20kg, 40kg) & Inventory seeded for ${product.name}`);
+  }
 
   // 5. Seed Delivery Zones
   const zones = [
