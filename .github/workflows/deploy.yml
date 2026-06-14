@@ -51,10 +51,8 @@ jobs:
           mkdir -p /var/www/packages/shared
           
           # Copy internal packages (keeping structure intact for symlink resolution)
-          rsync -av --delete packages/database/dist/ /var/www/packages/database/dist/
-          rsync -av --delete packages/database/package.json /var/www/packages/database/package.json
-          [ -d packages/shared/dist ] && rsync -av --delete packages/shared/dist/ /var/www/packages/shared/dist/ || true
-          rsync -av --delete packages/shared/package.json /var/www/packages/shared/package.json
+          rsync -av --delete --exclude 'node_modules' packages/database/ /var/www/packages/database/
+          rsync -av --delete --exclude 'node_modules' packages/shared/ /var/www/packages/shared/
 
           # Copy NestJS build & package.json
           rsync -av --delete apps/api/package.json /var/www/api/package.json
