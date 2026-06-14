@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: mango-runner
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
