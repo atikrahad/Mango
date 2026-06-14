@@ -30,8 +30,8 @@ jobs:
           # Copy the entire standalone directory, then place static/public assets into apps/web/
           rsync -av --delete apps/web/.next/standalone/ /var/www/web/
           mkdir -p /var/www/web/apps/web
-          rsync -av --delete apps/web/.next/static/ /var/www/web/apps/web/.next/static/
-          rsync -av --delete apps/web/public/ /var/www/web/apps/web/public/
+          [ -d apps/web/.next/static ] && rsync -av --delete apps/web/.next/static/ /var/www/web/apps/web/.next/static/ || true
+          [ -d apps/web/public ] && rsync -av --delete apps/web/public/ /var/www/web/apps/web/public/ || true
 
       # ---------------- ADMIN ----------------
       - name: Deploy Admin
@@ -40,8 +40,8 @@ jobs:
           # Copy the entire standalone directory, then place static/public assets into apps/admin/
           rsync -av --delete apps/admin/.next/standalone/ /var/www/admin/
           mkdir -p /var/www/admin/apps/admin
-          rsync -av --delete apps/admin/.next/static/ /var/www/admin/apps/admin/.next/static/
-          rsync -av --delete apps/admin/public/ /var/www/admin/apps/admin/public/
+          [ -d apps/admin/.next/static ] && rsync -av --delete apps/admin/.next/static/ /var/www/admin/apps/admin/.next/static/ || true
+          [ -d apps/admin/public ] && rsync -av --delete apps/admin/public/ /var/www/admin/apps/admin/public/ || true
 
       # ---------------- API ----------------
       - name: Deploy API
