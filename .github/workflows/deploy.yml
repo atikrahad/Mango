@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: mango-runner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # ---------------- WEB ----------------
+      - name: Deploy Web
+        run: |
+          mkdir -p /var/www/web
+          rsync -av --delete apps/web/.next/ /var/www/web/.next/
+          rsync -av apps/web/public/ /var/www/web/public/
+
+      # ---------------- ADMIN ----------------
+      - name: Deploy Admin
+        run: |
+          mkdir -p /var/www/admin
+          rsync -av --delete apps/admin/.next/ /var/www/admin/.next/
+          rsync -av apps/admin/public/ /var/www/admin/public/
+
+      # ---------------- API ----------------
+      - name: Deploy API
+        run: |
+          mkdir -p /var/www/api
+          rsync -av --delete apps/api/dist/ /var/www/api/dist/
+
+      # ---------------- PM2 SAFE START ----------------
+      - name: Start or Reload PM2
+        run: |
+          pm2 describe web >/dev/null 2>&1 && pm2 reload web || pm2 start npm --name web --cwd /var/www/web -- start
+          pm2 describe admin >/dev/null 2>&1 && pm2 reload admin || pm2 start npm --name admin --cwd /var/www/admin -- start
+          pm2 describe api >/dev/null 2>&1 && pm2 reload api || pm2 start node --name api --cwd /var/www/api dist/main.js
+
+          pm2 save
