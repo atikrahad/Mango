@@ -47,12 +47,12 @@ jobs:
       - name: Deploy API
         run: |
           mkdir -p /var/www/api
-          mkdir -p /var/www/packages/database
-          mkdir -p /var/www/packages/shared
+          mkdir -p /var/www/api/packages/database
+          mkdir -p /var/www/api/packages/shared
           
           # Copy internal packages (keeping structure intact for symlink resolution)
-          rsync -av --delete --exclude 'node_modules' packages/database/ /var/www/packages/database/
-          rsync -av --delete --exclude 'node_modules' packages/shared/ /var/www/packages/shared/
+          rsync -av --delete --exclude 'node_modules' packages/database/ /var/www/api/packages/database/
+          rsync -av --delete --exclude 'node_modules' packages/shared/ /var/www/api/packages/shared/
 
           # Copy NestJS build & package.json
           rsync -av --delete apps/api/package.json /var/www/api/package.json
