@@ -47,10 +47,21 @@ jobs:
       - name: Deploy API
         run: |
           mkdir -p /var/www/api
-          # Copy NestJS build, package.json, and fully resolve workspace symlinks into physical directories
+          mkdir -p /var/www/packages/database
+          mkdir -p /var/www/packages/shared
+          
+          # Copy internal packages (keeping structure intact for symlink resolution)
+          rsync -av --delete packages/database/dist/ /var/www/packages/database/dist/
+          rsync -av --delete packages/database/package.json /var/www/packages/database/package.json
+          [ -d packages/shared/dist ] && rsync -av --delete packages/shared/dist/ /var/www/packages/shared/dist/ || true
+          rsync -av --delete packages/shared/package.json /var/www/packages/shared/package.json
+
+          # Copy NestJS build & package.json
           rsync -av --delete apps/api/package.json /var/www/api/package.json
           rsync -av --delete apps/api/dist/ /var/www/api/dist/
-          rsync -avL --delete node_modules/ /var/www/api/node_modules/
+          
+          # Copy node_modules preserving symlinks (no -L)
+          rsync -av --delete node_modules/ /var/www/api/node_modules/
           
           # Run database schema push using the production .env file in /var/www/api
           cd /var/www/api
